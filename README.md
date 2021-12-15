@@ -56,7 +56,7 @@ All the cells in BLUE contain the structure of the ontology. They should only be
 (in this example, added 1 entry in the sheet `1 subcat1`)
 
 ### 4. Edit the tree structure
-#### a. convert the `.xlsx` file into a `.yaml
+#### a. convert the `.xlsx` file into a `.yaml`
 ```python
 from leavedonto import LeavedOnto
 
