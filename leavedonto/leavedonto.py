@@ -9,21 +9,22 @@ from .sort_bo_lists import SortBoLists
 
 
 class OntoBasis:
-    def __init__(self, ont):
+    def __init__(self, ont, ont_path):
         self.ont_path = ont
         self.ont = {'ont': None, 'legend': None}
-        self._load_xlsx = LoadXlsx(self.ont_path)
         if isinstance(ont, str):
             self.ont_path = Path(ont)
             self._load()
         elif isinstance(ont, dict):
             self.ont = ont
+            self.ont_path = ont_path
         else:
             ValueError('either a dict or a filename')
 
     def _load(self):
         if self.ont_path.suffix == '.xlsx':
-            self.ont = self._load_xlsx.load_xlsx()
+            lx = LoadXlsx(self.ont_path)
+            self.ont = lx.load_xlsx()
         elif self.ont_path.suffix == '.yaml':
             self._load_yaml()
         else:
@@ -60,8 +61,8 @@ class OntoBasis:
 
 
 class LeavedOnto(OntoBasis):
-    def __init__(self, ont):
-        super().__init__(ont)
+    def __init__(self, ont, ont_path=None):
+        super().__init__(ont, ont_path=ont_path)
         self.convert2xlsx = Convert2Xlsx(self.ont_path, self.ont).convert2xlsx
         self.convert2yaml = Convert2Yaml(self.ont_path, self.ont).convert2yaml
 
