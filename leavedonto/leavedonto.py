@@ -9,10 +9,10 @@ from .sort_bo_lists import SortBoLists
 
 
 class OntoBasis:
-    def __init__(self, ont, ont_path):
+    def __init__(self, ont, ont_path=None):
         self.ont_path = ont
         self.ont = {'ont': None, 'legend': None}
-        if isinstance(ont, str):
+        if isinstance(ont, str) or isinstance(ont, Path):
             self.ont_path = Path(ont)
             self._load()
         elif isinstance(ont, dict):
@@ -68,6 +68,22 @@ class LeavedOnto(OntoBasis):
 
         self._remove_duplicates()
         self._bo_sort()
+
+    def get_leaf_value(self, leaf, v_name):
+        idx = {l: n for n, l in enumerate(self.ont['legend'])}
+        return leaf[idx[v_name]]
+
+    def get_entries(self, onto, path, word, found):
+        for key, value in onto.items():
+            path.append(key)
+            if isinstance(value, dict):
+                self.get_entries(value, path, word, found)
+            else:
+                for entry in value:
+                    if entry[0] == word:
+                        occ = {'path': path, 'entry': entry}
+                        found.append(occ)
+                path = []
 
     def _remove_duplicates(self):
         def remove_dups(sheet):
