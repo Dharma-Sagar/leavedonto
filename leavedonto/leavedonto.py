@@ -64,10 +64,14 @@ class OntoBasis:
 class LeavedOnto(OntoBasis):
     def __init__(self, ont, ont_path=None):
         super().__init__(ont, ont_path=ont_path)
-        self.found = []
-        self.result_path = []
         self.convert2xlsx = Convert2Xlsx(self.ont_path, self.ont).convert2xlsx
         self.convert2yaml = Convert2Yaml(self.ont_path, self.ont).convert2yaml
+
+        # used by find_word()
+        self.found = []
+        self.result_path = []
+        # used by list_words
+        self.words = []
 
         self._remove_duplicates()
         self._bo_sort()
@@ -78,6 +82,21 @@ class LeavedOnto(OntoBasis):
             for l, v in zip_longest(self.ont['legend'], f['entry'], fillvalue=''):
                 entry[l] = v
             f['entry'] = entry
+
+    def list_words(self):
+        # initiate vars
+        self.words = []
+
+        self.__recursive_list(self.ont['ont'])
+        words = sorted(list(set(self.words)))
+        return words
+
+    def __recursive_list(self, onto):
+        for key, value in onto.items():
+            if isinstance(value, dict):
+                self.__recursive_list(value)
+            else:
+                self.words.extend([v[0] for v in value])
 
     def find_word(self, word):
         # initiate vars
