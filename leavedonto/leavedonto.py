@@ -79,11 +79,16 @@ class LeavedOnto(OntoBasis):
             if isinstance(value, dict):
                 self.get_entries(value, path, word, found)
             else:
+                has_found = False
                 for entry in value:
                     if entry[0] == word:
                         occ = {'path': path, 'entry': entry}
                         found.append(occ)
-                path = []
+                        has_found = True
+                if has_found:
+                    path = []
+                else:
+                    path = path[:-1]
 
     def _remove_duplicates(self):
         def remove_dups(sheet):
