@@ -1,4 +1,5 @@
 from pathlib import Path
+from itertools import zip_longest
 
 import yaml
 
@@ -63,32 +64,46 @@ class OntoBasis:
 class LeavedOnto(OntoBasis):
     def __init__(self, ont, ont_path=None):
         super().__init__(ont, ont_path=ont_path)
+        self.found = []
+        self.result_path = []
         self.convert2xlsx = Convert2Xlsx(self.ont_path, self.ont).convert2xlsx
         self.convert2yaml = Convert2Yaml(self.ont_path, self.ont).convert2yaml
 
         self._remove_duplicates()
         self._bo_sort()
 
-    def get_leaf_value(self, leaf, v_name):
-        idx = {l: n for n, l in enumerate(self.ont['legend'])}
-        return leaf[idx[v_name]]
+    def __add_legends(self):
+        for f in self.found:
+            entry = {}
+            for l, v in zip_longest(self.ont['legend'], f['entry'], fillvalue=''):
+                entry[l] = v
+            f['entry'] = entry
 
-    def get_entries(self, onto, path, word, found):
+    def find_word(self, word):
+        # initiate vars
+        self.result_path = []
+        self.found = []
+
+        self.__recursive_find(self.ont['ont'], word)
+        self.__add_legends()
+        return self.found
+
+    def __recursive_find(self, onto, word):
         for key, value in onto.items():
-            path.append(key)
+            self.result_path.append(key)
             if isinstance(value, dict):
-                self.get_entries(value, path, word, found)
+                self.__recursive_find(value, word)
             else:
                 has_found = False
                 for entry in value:
                     if entry[0] == word:
-                        occ = {'path': path, 'entry': entry}
-                        found.append(occ)
+                        occ = {'path': self.result_path, 'entry': entry}
+                        self.found.append(occ)
                         has_found = True
                 if has_found:
-                    path = []
+                    self.result_path = []
                 else:
-                    path = path[:-1]
+                    self.result_path = self.result_path[:-1]
 
     def _remove_duplicates(self):
         def remove_dups(sheet):
