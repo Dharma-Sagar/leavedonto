@@ -1,12 +1,11 @@
 # coding: utf8
-import pytest
 from pathlib import Path
 
 from leavedonto import LeavedOnto
 
 
 def test_path():
-    onto_path = Path().cwd() / 'test_get_entries' / 'test_onto.yaml'
+    onto_path = Path().cwd() / 'resources' / 'test_onto.yaml'
     lo = LeavedOnto(onto_path)
 
     found = lo.find_word('lemma')
