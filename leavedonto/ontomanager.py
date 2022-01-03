@@ -6,8 +6,21 @@ class OntoManager:
         self.ref = LeavedOnto(onto_ref)
 
     def merge_to_onto(self, onto):
-        # TODO: sanity check that both legends have same elements
-        to_organize, to_update = self._filter_entries(onto)
+        to_merge = LeavedOnto(onto)
+        if sorted(to_merge.ont['legend']) != sorted(self.ref.ont['legend']):
+            raise SyntaxError('the two ontos need to have the same elements as legend.\nPlease retry after that.')
+
+        legend = to_merge.ont['legend']
+        to_organize, to_update = self._filter_entries(to_merge)
+        for el in to_organize:
+            path, entry = el['path'], el['entry']
+            cur_node = self.ref.ont['ont']
+            for p in path:
+                if p in cur_node:
+                    cur_node = cur_node[p]
+                else:
+                    cur_node[p] = {}
+            print()
         to_organize = [self._entry_list2dict(to) for to in to_organize]
         to_update = [self._entry_list2dict(tu) for tu in to_update]
 
@@ -36,7 +49,6 @@ class OntoManager:
             out = [True for rr in ref_res if rr['entry']['col1_legend'] == r['entry']['col1_legend']]
             return True if out else False
 
-        onto = LeavedOnto(onto)
         to_update = []
         to_organize = []
         words = onto.list_words()

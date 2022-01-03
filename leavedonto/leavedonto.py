@@ -4,6 +4,7 @@ from itertools import zip_longest
 import yaml
 
 from .load_xlsx import LoadXlsx
+from .triedicts import dicts_to_trie
 from .convert2xlsx import Convert2Xlsx
 from .convert2yaml import Convert2Yaml
 from .sort_bo_lists import SortBoLists
@@ -32,7 +33,9 @@ class OntoBasis:
             raise ValueError('only supports xlsx and yaml files.')
 
     def _load_yaml(self):
-        self.ont = yaml.safe_load(self.ont_path.read_text())
+        ont = yaml.safe_load(self.ont_path.read_text())
+        dicts_to_trie(ont)
+        self.ont = ont
 
     def recursive_walk(self, input, func=None):
         """
@@ -83,12 +86,14 @@ class LeavedOnto(OntoBasis):
                 entry[l] = v
             f['entry'] = entry
 
-    def list_words(self):
+    def list_words(self, ont=None, words=None):
         # initiate vars
-        self.words = []
+        if not ont and not words:
+            ont = self.ont['ont']
+            words = self.words = []
 
-        self.__recursive_list(self.ont['ont'])
-        words = sorted(list(set(self.words)))
+        self.__recursive_list(ont)
+        words = sorted(list(set(words)))
         return words
 
     def __recursive_list(self, onto):
