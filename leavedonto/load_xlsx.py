@@ -5,21 +5,31 @@ import yaml
 from openpyxl import load_workbook
 from openpyxl.utils import coordinate_to_tuple
 
+from .triedicts import DictsToTrie
 
-class LoadXlsx():
+
+class LoadXlsx:
     def __init__(self, ont_path):
-        self.ont = {'ont': {}, 'legend': []}
+        self.dicts = {'ont': [], 'legend': []}
         self.ont_path = Path(ont_path)
 
     def load_xlsx(self):
+        # load xlsx
         wb = load_workbook(self.ont_path)
         ont = self.__load_ont_sheet(wb.worksheets[0])
         leaves = self.__load_ont_leaves(wb.worksheets[1:])
         ont = '\n'.join([''.join(o) for o in ont])
-        self.ont['ont'] = yaml.safe_load(ont)
-        self.__add_leaves(self.ont['ont'], leaves)
-        self.ont['legend'] = self.__find_legend(wb)
-        return self.ont
+
+        # convert to dicts
+        self.dicts = yaml.safe_load(ont)
+        self.__add_leaves(self.dicts['ont'], leaves)
+        self.dicts['legend'] = self.__find_legend(wb)
+
+        # convert to OntTrie
+        dt = DictsToTrie(self.dicts)
+        dt.convert()
+        ont = dt.trie
+        return ont
 
     @staticmethod
     def __load_ont_sheet(sheet):
@@ -76,8 +86,9 @@ class LoadXlsx():
                 if value[0] in leaves:
                     ont[key] = leaves[value[0]]
 
-    def __find_legend(self, workbook):
-        sheet1 = [s for s in workbook.worksheets if s.title.startswith(('1 '))][0]
+    @staticmethod
+    def __find_legend(workbook):
+        sheet1 = [s for s in workbook.worksheets if s.title.startswith('1 ')][0]
         _, max_col = coordinate_to_tuple(sheet1.dimensions.split(':')[1])
         legend = []
         for col in range(1, max_col + 1):

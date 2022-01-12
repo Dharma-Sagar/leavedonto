@@ -12,7 +12,7 @@ class SortBoLists(TibetanSort):
             first_els.append(f'{list[0]}—{n}')
         sorted_firsts = self.sort_list(first_els)
 
-        # sort lists based on sorted first elements
+        # use position from sorted first elements to sort lists
         sorted = []
         for el in sorted_firsts:
             _, num = el.split('—')

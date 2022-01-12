@@ -13,8 +13,9 @@ om = OntoManager(ref)
 
 
 def test_merge():
-    ref_words = om.ref.list_words()
-    assert 'lemma5' not in ref_words
+    word = 'lemma5'
+    res = om.ref.find_word(word)
+    assert res == []
 
     om.merge_to_onto(to_add)
     ref_words2 = om.ref.list_words()

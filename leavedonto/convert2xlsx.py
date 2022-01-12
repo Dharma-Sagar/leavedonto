@@ -4,11 +4,13 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
 from openpyxl.utils import coordinate_to_tuple, get_column_letter
 
+from .triedicts import trie_to_dicts
+
 
 class Convert2Xlsx:
     def __init__(self, ont_path, ont):
         self.ont_path = ont_path
-        self.ont = ont
+        self.ont = trie_to_dicts(ont)
 
     def convert2xlsx(self, out_path=None):
         def add_sheet(sheet, data, ft_style, starting_row=0):

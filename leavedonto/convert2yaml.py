@@ -2,11 +2,13 @@ from pathlib import Path
 
 import yaml
 
+from .triedicts import trie_to_dicts
+
 
 class Convert2Yaml:
     def __init__(self, ont_path, ont):
         self.ont_path = ont_path
-        self.ont = ont
+        self.ont = trie_to_dicts(ont)
 
     def convert2yaml(self, out_path=None):
         out = yaml.safe_dump(self.ont, allow_unicode=True)

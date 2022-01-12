@@ -7,7 +7,7 @@ class OntoManager:
 
     def merge_to_onto(self, onto):
         to_merge = LeavedOnto(onto)
-        if sorted(to_merge.ont['legend']) != sorted(self.ref.ont['legend']):
+        if sorted(to_merge.ont.legend) != sorted(self.ref.ont.legend):
             raise SyntaxError('the two ontos need to have the same elements as legend.\nPlease retry after that.')
 
         legend = to_merge.ont['legend']
@@ -38,7 +38,7 @@ class OntoManager:
         return new
 
     def __leaf_dict2list(self, leaf):
-        return [leaf[l] for l in self.ref.ont['legend']]
+        return [leaf[L] for L in self.ref.ont['legend']]
 
     def _filter_entries(self, onto):
         def has_same_path(r):

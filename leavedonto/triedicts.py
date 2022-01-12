@@ -1,16 +1,63 @@
-from .trie import Node, BasicTrie
+from .trie import OntTrie
 
 
 def trie_to_dicts(trie):
-    pass
+    # very ugly hack using exec() to be able to populate the nested dicts from the lists of paths
+    # the difficulty lies in growing "dicts['ont']" until "dicts['ont'][branch1][branch3][branch4]"
+    # and, at every step, creating the nested dict if required
+    #
+    # [([branch1, branch2], data1),
+    #  ([branch1, branch3, branch4], data2)]
+    #
+    # becomes:
+    #
+    # {branch1:
+    #       {branch2: data1},
+    #       {branch3:
+    #               {branch4: data2}
+    #       }
+    # }
+    dicts = {'legend': trie.legend, 'ont': {}}
+
+    all_branches = trie.find_entries()
+    for branch in all_branches:
+        path, entries = branch
+        i = 0
+        while i < len(path):
+            part = 'dicts["ont"]' + ''.join([f'["{p}"]' for p in path[:i]])
+            test_n_create_nested_dict = 'if path[i] not in ' + part + ':\n    ' + part + '[path[i]] = {}'
+            exec(test_n_create_nested_dict)
+            i += 1
+        exec('dicts["ont"]' + ''.join([f'["{p}"]' for p in path]) + ' = entries')
+
+    return dicts
 
 
 class DictsToTrie:
     def __init__(self, dicts):
         self.dicts = dicts
+        self.trie = OntTrie()
+        self.trie.legend = dicts['legend']
+
+        # vars
         self.words = None
         self.result_path = None
         self.found = None
+
+        self.convert()
+
+    def convert(self):
+        all_ = self.find_all_words()
+        for a in all_:
+            path, entry = a['path'], a['entry']
+            self.trie.add(path, entry)
+
+    def find_all_words(self):
+        words = self.list_words()
+        all_words = []
+        for w in words:
+            all_words.extend(self.find_word(w))
+        return all_words
 
     def list_words(self, ont=None, words=None):
         # initiate vars
@@ -53,9 +100,3 @@ class DictsToTrie:
                     self.result_path = []
                 else:
                     self.result_path = self.result_path[:-1]
-
-
-def dicts_to_trie(dicts):
-
-    print()
-

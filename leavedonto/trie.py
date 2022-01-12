@@ -6,7 +6,8 @@
 
 class Node:
     def __init__(self):
-        self.data = {'data': []}
+        self.path = []
+        self.data = []
         self.leaf = False
         self.children = dict()
 
@@ -26,8 +27,9 @@ class Node:
         return self.children[key]
 
 
-class BasicTrie:
+class OntTrie:
     def __init__(self):
+        self.legend = []
         self.head = Node()
 
     def __getitem__(self, key):
@@ -57,26 +59,53 @@ class BasicTrie:
         # adding data to the node
         if data:
             if not isinstance(data, list):
-                raise ValueError('data is not a list.')
+                raise ValueError('data should be a list.')
 
-            if current_node.data:
-                raise ValueError(f'data is not empty for {o_path}')
+            current_node.data.append(data)
+            current_node.path = o_path
 
-            current_node.data['data'] = data
+    def find_entries(self, prefix=None, lemma=None):
+        """
+        Returns a list of tuple(path, entry) in the trie that start with prefix.
+        In case prefix == None, all results are returned
+        """
+        results = []
 
-    def walk(self, el, current_node=None):
-        # logic of walking the trie adapted to be done outside the trie class (for Tokenize)
-        if not current_node:
-            current_node = self.head
-
-        if el in current_node.children:
-            next_node = current_node[el]
+        # 1. Determine search scope by finding end-of-prefix node
+        if not prefix:
+            top_node = self.head
+            queue = [node for key, node in top_node.children.items()]
         else:
-            next_node = None
+            top_node = self.head
+            for p in prefix:
+                if p in top_node.children:
+                    top_node = top_node.children[p]
+                else:
+                    # Prefix not in tree, go no further
+                    return results
+            queue = [top_node]
 
-        return next_node
+        # 2. Get search results: trie walking + find matches
+        while queue:
+            current_node = queue.pop()
+            if current_node.leaf:
+                # find matches ###########################################
+                if lemma:
+                    matches = []
+                    for entry in current_node.data:
+                        if entry[0] == lemma:
+                            matches.append(lemma)
+                    if matches:
+                        results.append((current_node.path, matches))
+                else:
+                    results.append((current_node.path, current_node.data))
+                ##########################################################
 
-    def has_word(self, path):
+            queue = [node for key, node in current_node.children.items()] + queue
+
+        return results
+
+    def has_category(self, path):
         if not path:
             raise ValueError('"path" must be list of strings')
 
@@ -95,9 +124,9 @@ class BasicTrie:
                 exists = False
 
         if exists:
-            return {"exists": exists, "data": current_node.data}
+            return {"path": current_node.path, "data": current_node.data}
         else:
-            return {"exists": exists, "data": current_node.data}
+            return False
 
     def add_data(self, path, data):
         """Adds data to words.
@@ -122,5 +151,6 @@ class BasicTrie:
             return False
 
         # adding data
-        current_node.data = data
+
+        current_node.data.append(data)
         return True
