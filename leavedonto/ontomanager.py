@@ -1,30 +1,72 @@
+from pathlib import Path
+
 from .leavedonto import LeavedOnto
 
 
 class OntoManager:
-    def __init__(self, onto_ref):
-        self.ref = LeavedOnto(onto_ref)
+    def __init__(self, onto_basis):
+        self.onto1 = LeavedOnto(onto_basis)
 
-    def merge_to_onto(self, onto):
-        to_merge = LeavedOnto(onto)
-        if sorted(to_merge.ont.legend) != sorted(self.ref.ont.legend):
-            raise SyntaxError('the two ontos need to have the same elements as legend.\nPlease retry after that.')
+    def diff_ontos(self, onto2, mode='all'):
+        """
 
-        legend = to_merge.ont['legend']
-        to_organize, to_update = self._filter_entries(to_merge)
-        for el in to_organize:
-            path, entry = el['path'], el['entry']
-            cur_node = self.ref.ont['ont']
-            for p in path:
-                if p in cur_node:
-                    cur_node = cur_node[p]
-                else:
-                    cur_node[p] = {}
-            print()
-        to_organize = [self._entry_list2dict(to) for to in to_organize]
-        to_update = [self._entry_list2dict(tu) for tu in to_update]
+        :param onto2: path to onto to diff
+        :param mode: all, base_only, other_only, shared
+        :return:
+        """
+        if isinstance(onto2, LeavedOnto):
+            other_onto = onto2
+        elif isinstance(onto2, Path):
+            other_onto = LeavedOnto(onto2)
+        else:
+            raise TypeError('to_diff should be either a Path object, or a LeavedOnto object')
 
-        print()
+        base_only, shared, other_only = self.__find_differences(other_onto, mode=mode)
+
+        if mode == 'all':
+            return base_only, shared, other_only
+        elif mode == 'base_only':
+            return base_only
+        elif mode == 'other_only':
+            return other_only
+        elif mode == 'shared':
+            return shared
+        else:
+            raise SyntaxError('either all, base_only, other_only or shared')
+
+    @staticmethod
+    def __expand_search_results(res):
+        return [(path, e) for path, entries in res for e in entries]
+
+    def __find_differences(self, onto2, mode='all'):
+        entries_base = self.__expand_search_results(self.onto1.ont.find_entries())
+        entries_other = self.__expand_search_results(onto2.ont.find_entries())
+
+        only_in_base, only_in_other, shared = None, None, None
+        if mode == 'all' or mode == 'base_only':
+            only_in_base = [e for e in entries_base if e not in entries_other]
+        if mode == 'all' or mode == 'other_only':
+            only_in_other = [e for e in entries_other if e not in entries_base]
+        if mode == 'all' or mode == 'shared':
+            shared = [e for e in entries_other if e in entries_base]
+
+        return only_in_base, shared, only_in_other
+
+    def merge_to_onto(self, onto2, in_to_organize=False):
+        # add to onto1 the entries that are only in onto2
+        onto2 = LeavedOnto(onto2)
+        if sorted(onto2.ont.legend) != sorted(self.onto1.ont.legend):
+            raise SyntaxError('the two ontos need to have the same elements in the legend, in the same order.'
+                              '\nPlease retry after that.')
+
+        to_merge = self.diff_ontos(onto2, mode='other_only')
+
+        if in_to_organize:
+            for i in range(len(to_merge)):
+                to_merge[i] = (['to_organize'] + to_merge[i][0], to_merge[i][1])
+
+        for path, entry in to_merge:
+            self.onto1.ont.add(path, entry)
 
     def _entry_list2dict(self, entry):
         p, e = entry['path'], entry['entry']
@@ -38,7 +80,7 @@ class OntoManager:
         return new
 
     def __leaf_dict2list(self, leaf):
-        return [leaf[L] for L in self.ref.ont['legend']]
+        return [leaf[L] for L in self.onto1.ont['legend']]
 
     def _filter_entries(self, onto):
         def has_same_path(r):
@@ -54,7 +96,7 @@ class OntoManager:
         words = onto.list_words()
         for w in words:
             res = onto.find_word(w)
-            ref_res = self.ref.find_word(w)
+            ref_res = self.onto1.find_word(w)
             for r in res:
                 if r in ref_res:
                     continue
@@ -63,9 +105,3 @@ class OntoManager:
                 else:
                     to_organize.append(r)
         return to_update, to_organize
-
-    def diff_from_onto(self, onto):
-        pass
-
-    def update_ref(self, onto):
-        pass

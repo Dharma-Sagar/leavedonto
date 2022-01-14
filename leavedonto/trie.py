@@ -105,6 +105,48 @@ class OntTrie:
 
         return results
 
+    def is_in_onto(self, path=None, lemma=None):
+        """
+        returns True at the first match, False otherwise
+        """
+        if not path and not lemma:
+            raise SyntaxError('at least one argument should be provided.')
+
+        # 1. parse through to the end of path,
+        if not path:
+            top_node = self.head
+            queue = [node for key, node in top_node.children.items()]
+        else:
+            top_node = self.head
+            for p in path:
+                if p in top_node.children:
+                    top_node = top_node.children[p]
+                else:
+                    # full path not in the onto
+                    return False
+            queue = [top_node]
+
+        # 2. if path alone, we have successfully parsed. return True
+        if not lemma:
+            return True
+
+        # 3. check if lemma exists in that part of the trie
+        else:
+            while queue:
+                current_node = queue.pop()
+                if current_node.leaf:
+                    # find matches ###########################################
+                    if lemma:
+                        matches = []
+                        for entry in current_node.data:
+                            if entry[0] == lemma:
+                                return True
+                    ##########################################################
+
+                queue = [node for key, node in current_node.children.items()] + queue
+
+        return False
+
     def has_category(self, path):
         if not path:
             raise ValueError('"path" must be list of strings')

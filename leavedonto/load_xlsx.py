@@ -21,7 +21,7 @@ class LoadXlsx:
         ont = '\n'.join([''.join(o) for o in ont])
 
         # convert to dicts
-        self.dicts = yaml.safe_load(ont)
+        self.dicts['ont'] = yaml.safe_load(ont)
         self.__add_leaves(self.dicts['ont'], leaves)
         self.dicts['legend'] = self.__find_legend(wb)
 

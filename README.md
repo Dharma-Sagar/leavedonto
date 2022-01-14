@@ -35,7 +35,7 @@ notes:
 ```python
 from leavedonto import LeavedOnto
 
-lo = LeavedOnto('test_onto.yaml')
+lo = LeavedOnto('test_onto_.yaml')
 lo.convert2xlsx('output')
 # convert2xlsx() takes as argument an optional output directory
 #                if the directory is missing, it is created.
@@ -111,7 +111,7 @@ ont:
 ```python
 from leavedonto import LeavedOnto
 
-lo = LeavedOnto('output/test_onto.yaml')
+lo = LeavedOnto('output/test_onto_.yaml')
 lo.convert2xlsx('output')
 ```
 Output:
