@@ -4,6 +4,25 @@ Managing leaved ontologies
 ## Leaved Ontology
 An ontology is a tree-like structure organizing words or ideas. Each entry or word in what we name a "leaved ontology" is a row in a speadsheet, allowing to add as many fields/leaves as a spreadsheet row can handle.
 
+## Usage of OntoManager
+
+```python
+from leavedonto import OntoManager
+
+om = OntoManager('test_onto.yaml')
+
+om.diff_ontos('test_onto2.yaml', mode='all')
+# mode options: all, base_only, other_only, shared
+# default value is "all"
+# returns a list of tuple(path, entry) 
+# "all" returns three lists, "base_only", "shared" and "other_only"
+
+om.merge_to_onto('test_onto2', in_to_organize=True)
+# merges entries from test_onto2.yaml that are not in test_onto.yaml
+# if in_to_organize == True, new entries are in a "to_organize" branch, 
+# otherwise, they are integrated in test_onto.yaml
+```
+
 ## Usage of LeavedOnto
 ### 1. Create the initial `.yaml` ontology
 
