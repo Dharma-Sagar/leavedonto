@@ -16,10 +16,19 @@ class Convert2Yaml:
 
         if not out_path:
             out_path = self.ont_path.parent
-        out_file = Path(out_path) / (self.ont_path.stem + '.yaml')
+
+        if isinstance(out_path, str):
+            out_path = Path(out_path)
+
+        # out_path is a .yaml file
+        if out_path.suffix != '.yaml':
+            out_file = Path(out_path) / (self.ont_path.stem + '.yaml')
+        else:
+            out_file = out_path
         out_file.write_text(out)
 
-    def __group_leaf_entries(self, out):
+    @staticmethod
+    def __group_leaf_entries(out):
         start = '- -'
         legend = '- '
         processed = []

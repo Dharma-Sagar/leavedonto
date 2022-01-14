@@ -54,10 +54,12 @@ notes:
 ```python
 from leavedonto import LeavedOnto
 
-lo = LeavedOnto('test_onto_.yaml')
+lo = LeavedOnto('test_onto.yaml')
 lo.convert2xlsx('output')
-# convert2xlsx() takes as argument an optional output directory
-#                if the directory is missing, it is created.
+# if argument is:
+# - nothing: a .xlsx will be created besides test_onto.yaml
+# - a directory: if missing, it will be created. a .xlsx will be created in the directory
+# - a path to a .xlsx: the xlsx will be written 
 ```
 
 #### Ontology sheet
@@ -81,6 +83,10 @@ from leavedonto import LeavedOnto
 
 lo = LeavedOnto('output/test_onto.xlsx')
 lo.convert2yaml('output')
+# if argument is:
+# - nothing: a .yaml will be created besides test_onto.xlsx
+# - a directory: if missing, it will be created. a .yaml will be created in the directory
+# - a path to a .yaml: the yaml will be written
 ```
 
 Output:
