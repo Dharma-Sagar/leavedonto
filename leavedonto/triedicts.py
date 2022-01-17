@@ -80,15 +80,15 @@ class DictsToTrie:
         # initiate vars
         self.result_path = []
         self.found = []
-
-        self.__recursive_find(self.dicts['ont'], word)
+        level = 0
+        self.__recursive_find(self.dicts['ont'], word, level)
         return self.found
 
-    def __recursive_find(self, onto, word):
+    def __recursive_find(self, onto, word, level):
         for key, value in onto.items():
             self.result_path.append(key)
             if isinstance(value, dict):
-                self.__recursive_find(value, word)
+                self.__recursive_find(value, word, level+1)
             else:
                 has_found = False
                 for entry in value:
@@ -100,3 +100,5 @@ class DictsToTrie:
                     self.result_path = []
                 else:
                     self.result_path = self.result_path[:-1]
+        level -= 1
+        self.result_path = self.result_path[:-1]

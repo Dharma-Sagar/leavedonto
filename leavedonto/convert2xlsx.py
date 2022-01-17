@@ -60,7 +60,7 @@ class Convert2Xlsx:
         else:
             out_path = Path(out_path)
 
-        if not out_path.is_dir() and out_path.suffix != '.xlsx':
+        if not out_path.is_dir() or out_path.suffix != '.xlsx':
             out_path.mkdir(exist_ok=True)
             out_file = Path(out_path) / (self.ont_path.stem + '.xlsx')
         else:

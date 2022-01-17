@@ -64,10 +64,11 @@ class OntTrie:
             current_node.data.append(data)
             current_node.path = o_path
 
-    def find_entries(self, prefix=None, lemma=None):
+    def find_entries(self, prefix=None, lemma=None, mode='entries'):
         """
         Returns a list of tuple(path, entry) in the trie that start with prefix.
         In case prefix == None, all results are returned
+        In case mode == entries, return full entries, elif mode == lemmas, return only lemmas
         """
         results = []
 
@@ -94,10 +95,21 @@ class OntTrie:
                     matches = []
                     for entry in current_node.data:
                         if entry[0] == lemma:
-                            matches.append(lemma)
+                            if mode == 'entries':
+                                matches.append(entry)
+                            elif mode == 'lemmas':
+                                matches.append(lemma)
+                            else:
+                                raise ValueError('mode should be either "entries" or "lemmas".')
                     if matches:
                         results.append((current_node.path, matches))
                 else:
+                    if mode == 'entries':
+                        results.append((current_node.path, current_node.data))
+                    elif mode == 'lemmas':
+                        results.append((current_node.path, lemma))
+                    else:
+                        raise ValueError('mode should be either "entries" or "lemmas".')
                     results.append((current_node.path, current_node.data))
                 ##########################################################
 

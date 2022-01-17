@@ -1,4 +1,5 @@
 from pathlib import Path
+from itertools import zip_longest
 
 import yaml
 
@@ -34,6 +35,13 @@ class LeavedOnto:
 
     def find_word(self, word):
         return self.ont.find_entries(lemma=word)
+
+    def get_field_value(self, entries, field):
+        for entry in entries:
+            for legend, value in zip_longest(self.ont.legend, entry):
+                if legend == field:
+                    return value
+        return None
 
     def _load(self):
         if self.ont_path.suffix == '.xlsx':

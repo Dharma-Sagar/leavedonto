@@ -9,7 +9,7 @@ An ontology is a tree-like structure organizing words or ideas. Each entry or wo
 ```python
 from leavedonto import OntoManager
 
-om = OntoManager('test_onto.yaml')
+om = OntoManager('full_onto.yaml')
 
 om.diff_ontos('test_onto2.yaml', mode='all')
 # mode options: all, base_only, other_only, shared
@@ -18,9 +18,9 @@ om.diff_ontos('test_onto2.yaml', mode='all')
 # "all" returns three lists, "base_only", "shared" and "other_only"
 
 om.merge_to_onto('test_onto2', in_to_organize=True)
-# merges entries from test_onto2.yaml that are not in test_onto.yaml
+# merges entries from test_onto2.yaml that are not in full_onto.yaml
 # if in_to_organize == True, new entries are in a "to_organize" branch, 
-# otherwise, they are integrated in test_onto.yaml
+# otherwise, they are integrated in full_onto.yaml
 ```
 
 ## Usage of LeavedOnto
@@ -54,10 +54,10 @@ notes:
 ```python
 from leavedonto import LeavedOnto
 
-lo = LeavedOnto('test_onto.yaml')
+lo = LeavedOnto('full_onto.yaml')
 lo.convert2xlsx('output')
 # if argument is:
-# - nothing: a .xlsx will be created besides test_onto.yaml
+# - nothing: a .xlsx will be created besides full_onto.yaml
 # - a directory: if missing, it will be created. a .xlsx will be created in the directory
 # - a path to a .xlsx: the xlsx will be written 
 ```
