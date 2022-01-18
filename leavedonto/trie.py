@@ -77,6 +77,7 @@ class OntTrie:
             top_node = self.head
             queue = [node for key, node in top_node.children.items()]
         else:
+            prefix = [prefix] if isinstance(prefix, str) else prefix
             top_node = self.head
             for p in prefix:
                 if p in top_node.children:

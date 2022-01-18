@@ -52,6 +52,10 @@ class OntoManager:
 
         return only_in_base, shared, only_in_other
 
+    def batch_merge_to_onto(self, onto_list, in_to_organize=False):
+        for onto in onto_list:
+            self.merge_to_onto(onto, in_to_organize=in_to_organize)
+
     def merge_to_onto(self, onto2, in_to_organize=False):
         # add to onto1 the entries that are only in onto2
         onto2 = LeavedOnto(onto2)
