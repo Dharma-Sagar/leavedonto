@@ -5,7 +5,7 @@ from leavedonto import LeavedOnto
 
 
 def test_path():
-    onto_path = Path().cwd() / 'resources' / 'full_onto.yaml'
+    onto_path = Path().cwd() / 'resources' / 'general_onto.yaml'
     lo = LeavedOnto(onto_path)
 
     found = lo.find_word('lemma')
