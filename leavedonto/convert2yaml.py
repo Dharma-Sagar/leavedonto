@@ -21,19 +21,19 @@ class Convert2Yaml:
             out_path = Path(out_path)
 
         # out_path is a .yaml file
-        if out_path.suffix != '.yaml':
-            out_file = Path(out_path) / (self.ont_path.stem + '.yaml')
+        if out_path.suffix != ".yaml":
+            out_file = Path(out_path) / (self.ont_path.stem + ".yaml")
         else:
             out_file = out_path
         out_file.write_text(out)
 
     @staticmethod
     def __group_leaf_entries(out):
-        start = '- -'
-        legend = '- '
+        start = "- -"
+        legend = "- "
         processed = []
         cur_idx = 0
-        lines = out.split('\n')
+        lines = out.split("\n")
         while cur_idx < len(lines):
             cur_line = lines[cur_idx]
             if start not in cur_line and not cur_line.startswith(legend):
@@ -50,28 +50,28 @@ class Convert2Yaml:
                 # convert to list
                 parts = []
                 for el in group[1:]:
-                    parts.append(el.replace(legend, ''))
+                    parts.append(el.replace(legend, ""))
                 formatted = f' [{", ".join(parts)}]'
 
                 processed[-1] += formatted
 
             else:
                 # find entries
-                prefix = cur_line[:cur_line.find(start)]
+                prefix = cur_line[: cur_line.find(start)]
                 group = [cur_line]
                 cur_idx += 1
-                while lines[cur_idx].startswith(f'{prefix}  -'):
+                while lines[cur_idx].startswith(f"{prefix}  -"):
                     group.append(lines[cur_idx])
                     cur_idx += 1
                 cur_idx -= 1  # undo extra increment
 
                 # convert to list
-                parts = [group[0].replace(prefix + start + ' ', '')]
+                parts = [group[0].replace(prefix + start + " ", "")]
                 for el in group[1:]:
-                    parts.append(el.replace(f'{prefix}  - ', ''))
+                    parts.append(el.replace(f"{prefix}  - ", ""))
                 formatted = f'{prefix}- [{", ".join(parts)}]'
 
                 processed.append(formatted)
             cur_idx += 1
 
-        return '\n'.join(processed)
+        return "\n".join(processed)

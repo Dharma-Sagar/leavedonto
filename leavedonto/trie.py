@@ -59,12 +59,12 @@ class OntTrie:
         # adding data to the node
         if data:
             if not isinstance(data, list):
-                raise ValueError('data should be a list.')
+                raise ValueError("data should be a list.")
 
             current_node.data.append(data)
             current_node.path = o_path
 
-    def find_entries(self, prefix=None, lemma=None, mode='entries'):
+    def find_entries(self, prefix=None, lemma=None, mode="entries"):
         """
         Returns a list of tuple(path, entry) in the trie that start with prefix.
         In case prefix == None, all results are returned
@@ -96,18 +96,20 @@ class OntTrie:
                     matches = []
                     for entry in current_node.data:
                         if entry[0] == lemma:
-                            if mode == 'entries':
+                            if mode == "entries":
                                 matches.append(entry)
-                            elif mode == 'lemmas':
+                            elif mode == "lemmas":
                                 matches.append(lemma)
                             else:
-                                raise ValueError('mode should be either "entries" or "lemmas".')
+                                raise ValueError(
+                                    'mode should be either "entries" or "lemmas".'
+                                )
                     if matches:
                         results.append((current_node.path, matches))
                 else:
-                    if mode == 'entries':
+                    if mode == "entries":
                         results.append((current_node.path, current_node.data))
-                    elif mode == 'lemmas':
+                    elif mode == "lemmas":
                         results.append((current_node.path, lemma))
                     else:
                         raise ValueError('mode should be either "entries" or "lemmas".')
@@ -123,7 +125,7 @@ class OntTrie:
         returns True at the first match, False otherwise
         """
         if not path and not lemma:
-            raise SyntaxError('at least one argument should be provided.')
+            raise SyntaxError("at least one argument should be provided.")
 
         # 1. parse through to the end of path,
         if not path:
@@ -150,7 +152,6 @@ class OntTrie:
                 if current_node.leaf:
                     # find matches ###########################################
                     if lemma:
-                        matches = []
                         for entry in current_node.data:
                             if entry[0] == lemma:
                                 return True
@@ -206,6 +207,5 @@ class OntTrie:
             return False
 
         # adding data
-
         current_node.data.append(data)
         return True

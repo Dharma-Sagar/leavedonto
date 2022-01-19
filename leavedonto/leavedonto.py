@@ -26,7 +26,7 @@ class LeavedOnto:
             self.ont = ont
             self.ont_path = ont_path
         else:
-            ValueError('either a dict or a filename or an OntTrie object')
+            ValueError("either a dict or a filename or an OntTrie object")
 
         self._cleanup()
 
@@ -43,13 +43,13 @@ class LeavedOnto:
         return None
 
     def _load(self):
-        if self.ont_path.suffix == '.xlsx':
+        if self.ont_path.suffix == ".xlsx":
             lx = LoadXlsx(self.ont_path)
             self.ont = lx.load_xlsx()
-        elif self.ont_path.suffix == '.yaml':
+        elif self.ont_path.suffix == ".yaml":
             self._load_yaml()
         else:
-            raise ValueError('only supports xlsx and yaml files.')
+            raise ValueError("only supports xlsx and yaml files.")
 
     def _load_yaml(self):
         ont_yaml = yaml.safe_load(self.ont_path.read_text())

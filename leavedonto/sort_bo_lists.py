@@ -8,15 +8,15 @@ class SortBoLists(TibetanSort):
     def sort_list_of_lists(self, list_of_lists):
         # extract first elements + append position
         first_els = []
-        for n, list in enumerate(list_of_lists):
-            first_els.append(f'{list[0]}—{n}')
+        for n, list_ in enumerate(list_of_lists):
+            first_els.append(f"{list_[0]}—{n}")
         sorted_firsts = self.sort_list(first_els)
 
         # use position from sorted first elements to sort lists
-        sorted = []
+        sorted_ = []
         for el in sorted_firsts:
-            _, num = el.split('—')
+            _, num = el.split("—")
             num = int(num)
-            sorted.append(list_of_lists[num])
+            sorted_.append(list_of_lists[num])
 
         return sorted
