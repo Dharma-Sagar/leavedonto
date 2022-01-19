@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from .leavedonto import LeavedOnto
+from .tag_to_onto import generate_to_tag, tagged_to_trie, get_entries
 
 
 class OntoManager:
@@ -35,6 +36,22 @@ class OntoManager:
             return shared
         else:
             raise SyntaxError("either all, base_only, other_only or shared")
+
+    def tag_segmented(self, in_file, out_file=None):
+        generate_to_tag(in_file, self.onto1, out_file=out_file)
+
+    def onto_from_tagged(self, in_file, out_file=None):
+        # first merge all ontos you want, then generate onto from tagged
+
+        # load words and tags
+        tagged = get_entries(in_file)
+        # generate trie
+        trie = tagged_to_trie(tagged, self.onto1)
+        # write it to out_file
+        if not out_file:
+            out_file = in_file.parent / (in_file.stem + '_onto.yaml')
+        onto = LeavedOnto(trie, out_file)
+        onto.convert2yaml()
 
     @staticmethod
     def __expand_search_results(res):

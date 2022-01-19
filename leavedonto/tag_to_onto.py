@@ -1,8 +1,49 @@
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Protection
+from openpyxl.utils import coordinate_to_tuple
 
+from .trie import OntTrie
 from .dataval import DataVal
 from .utils import resize_sheet
+
+
+def tagged_to_trie(tagged, onto_basis):
+    trie = OntTrie()
+    trie.legend = onto_basis.ont.legend
+    for word, pos, level in tagged:
+        found = onto_basis.ont.find_entries(prefix=pos, lemma=word)
+        if found:
+            for path, entries in found:
+                for e in entries:
+                    found_level = onto_basis.get_field_value(e, "level")
+                    if found_level == level:
+                        trie.add(path, e)
+        else:
+            path = [pos, "to_organize"]
+            parts = {"word": word, "POS": pos, "level": level}
+            entry = [parts[l] if l in parts else "" for l in onto_basis.ont.legend]
+            trie.add(path, entry)
+    return trie
+
+
+def get_entries(in_file):
+    wb = load_workbook(in_file)
+    ws = wb.active
+
+    # from sheet to list of lists
+    tagged = []
+    max_row, max_col = coordinate_to_tuple(ws.dimensions.split(":")[1])
+    for r in range(1, max_row + 1, 4):
+        for col in range(1, max_col + 1):
+            # ignoring the first column containing the numbers
+            word = ws.cell(r, col).value
+            pos = ws.cell(r + 1, col).value
+            level = ws.cell(r + 2, col).value
+            entry = (word, pos, level)
+            if pos and level and entry not in tagged:
+                tagged.append(entry)
+
+    return tagged
 
 
 def generate_to_tag(in_file, onto, out_file=None):
