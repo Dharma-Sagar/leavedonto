@@ -49,7 +49,7 @@ class OntoManager:
         trie = tagged_to_trie(tagged, self.onto1)
         # write it to out_file
         if not out_file:
-            out_file = in_file.parent / (in_file.stem + '_onto.yaml')
+            out_file = in_file.parent / (in_file.stem + "_onto.yaml")
         onto = LeavedOnto(trie, out_file)
         onto.convert2yaml()
 
@@ -89,7 +89,9 @@ class OntoManager:
         # add origin to entries
         for i, t in enumerate(to_merge):
             path, entry = t[0], t[1]
-            self.onto1.set_field_value(entry, 'origin', onto2.ont_path.stem.split('_')[0])
+            self.onto1.set_field_value(
+                entry, "origin", onto2.ont_path.stem.split("_")[0]
+            )
 
         if in_to_organize:
             for i in range(len(to_merge)):

@@ -38,27 +38,27 @@ class LeavedOnto:
 
     def get_field_value(self, entry, field):
         if field not in self.ont.legend:
-            raise IndexError(f'{field} not contained in legend:\n{self.ont.legend}')
+            raise IndexError(f"{field} not contained in legend:\n{self.ont.legend}")
         for legend, value in zip_longest(self.ont.legend, entry):
             if legend == field:
                 return value
         return None
 
-    def set_field_value(self, entry, field, value, mode='append'):
-        if mode != 'replace' and mode != 'append':
+    def set_field_value(self, entry, field, value, mode="append"):
+        if mode != "replace" and mode != "append":
             raise ValueError('mode can be "replace" or "append"')
         if field not in self.ont.legend:
-            raise IndexError(f'{field} not contained in legend:\n{self.ont.legend}')
+            raise IndexError(f"{field} not contained in legend:\n{self.ont.legend}")
 
         for i, legend in enumerate(self.ont.legend):
             if legend == field:
-                if mode == 'replace':
+                if mode == "replace":
                     entry[i] = value
-                if mode == 'append':
-                    parts = entry[i].split(' — ')
+                if mode == "append":
+                    parts = entry[i].split(" — ")
                     parts.append(value)
                     parts = sorted([p for p in set(parts) if p])
-                    entry[i] = ' — '.join(parts)
+                    entry[i] = " — ".join(parts)
 
     def _load(self):
         if self.ont_path.suffix == ".xlsx":
