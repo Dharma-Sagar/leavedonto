@@ -86,6 +86,11 @@ class OntoManager:
 
         to_merge = self.diff_ontos(onto2, mode="other_only")
 
+        # add origin to entries
+        for i, t in enumerate(to_merge):
+            path, entry = t[0], t[1]
+            self.onto1.set_field_value(entry, 'origin', onto2.ont_path.stem.split('_')[0])
+
         if in_to_organize:
             for i in range(len(to_merge)):
                 to_merge[i] = (["to_organize"] + to_merge[i][0], to_merge[i][1])

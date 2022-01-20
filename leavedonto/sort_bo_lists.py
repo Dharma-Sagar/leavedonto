@@ -19,4 +19,4 @@ class SortBoLists(TibetanSort):
             num = int(num)
             sorted_.append(list_of_lists[num])
 
-        return sorted
+        return sorted_
