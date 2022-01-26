@@ -155,7 +155,7 @@ class OntoManager:
                    "# list of tuple(<old>, <new>): <old> becomes <new>, keeping all the content in the fields.\n" \
                    "# note: leave empty if there are no replacements.\n" \
                    "replacements: []"
-        to_adjust = yaml.safe_dump(template.format(orig=self.onto1.ont.legend))
+        to_adjust = template.format(orig=self.onto1.ont.legend)
 
         legend_config = Path("adjust_legends.yaml")
         if not legend_config.is_file():
@@ -169,6 +169,8 @@ class OntoManager:
 
         self._adjust_entries(adjust["legend_orig"], adjust["legend_new"])
         self._replace_legend(adjust["legend_new"], adjust["replacements"])
+        self.onto1.convert2yaml()
+        legend_config.unlink(missing_ok=True)
 
     def _replace_legend(self, l_new, replc):
         # apply replacements
