@@ -3,12 +3,16 @@ from pathlib import Path
 import yaml
 
 from .leavedonto import LeavedOnto
+from .trie import OntTrie
 from .tag_to_onto import generate_to_tag, tagged_to_trie, get_entries
 
 
 class OntoManager:
-    def __init__(self, onto_basis):
-        self.onto1 = LeavedOnto(onto_basis)
+    def __init__(self, onto_basis=None):
+        if onto_basis:
+            self.onto1 = LeavedOnto(onto_basis)
+        else:
+            self.onto1 = LeavedOnto(OntTrie())
 
     def diff_ontos(self, onto2, mode="all"):
         """
