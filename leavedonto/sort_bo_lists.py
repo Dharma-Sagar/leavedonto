@@ -6,10 +6,11 @@ class SortBoLists(TibetanSort):
         super().__init__()
 
     def sort_list_of_lists(self, list_of_lists):
-        # extract first elements + append position
+        # extract first four elements + append position
         first_els = []
         for n, list_ in enumerate(list_of_lists):
-            first_els.append(f"{list_[0]}—{n}")
+            els = [list_[i] if len(list_) >= i else '' for i in range(4)]
+            first_els.append(f"{''.join(els)}—{n}")
         sorted_firsts = self.sort_list(first_els)
 
         # use position from sorted first elements to sort lists
