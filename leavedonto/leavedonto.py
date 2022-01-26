@@ -30,8 +30,13 @@ class LeavedOnto:
 
         self._cleanup()
 
-        self.convert2xlsx = Convert2Xlsx(self.ont_path, self.ont).convert2xlsx
-        self.convert2yaml = Convert2Yaml(self.ont_path, self.ont).convert2yaml
+    def convert2xlsx(self, out_path=None):
+        cx = Convert2Xlsx(self.ont_path, self.ont)
+        cx.convert2xlsx(out_path)
+
+    def convert2yaml(self, out_path=None):
+        cy = Convert2Yaml(self.ont_path, self.ont)
+        cy.convert2yaml(out_path)
 
     def find_word(self, word):
         return self.ont.find_entries(lemma=word)
