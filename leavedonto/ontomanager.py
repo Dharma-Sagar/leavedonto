@@ -109,8 +109,6 @@ class OntoManager:
                 to_merge[i] = (["to_organize"] + to_merge[i][0], to_merge[i][1])
 
         for path, entry in to_merge:
-            if path[0] == 'བྱ་གྲོགས།':
-                print()
             self.__merge_origins_n_add(path, entry)
 
         self.onto1._cleanup()
@@ -145,7 +143,6 @@ class OntoManager:
                             # only difference is the origin -> merge origins in the trie
                             # 1. remove old entry
                             self.onto1.ont.remove_entry(path, f_e)
-                            print()
                             # 2. merge origins and add new entry
                             origs = []
                             for o in [entry_origin, f_e_origin]:
