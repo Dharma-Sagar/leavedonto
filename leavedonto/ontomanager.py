@@ -17,7 +17,7 @@ class OntoManager:
     def diff_ontos(self, onto2, mode="all"):
         """
 
-        :param onto2: path to onto to diff
+        :param onto2: path to onto to diff or LeavedOnto object
         :param mode: all, base_only, other_only, shared
         :return:
         """
@@ -77,13 +77,18 @@ class OntoManager:
 
         return only_in_base, shared, only_in_other
 
-    def batch_merge_to_onto(self, onto_list, in_to_organize=False):
-        for onto in onto_list:
+    def batch_merge_to_onto(self, path_to_ontos, in_to_organize=False):
+        for onto in Path(path_to_ontos).glob('*.yaml'):
+            print(f'merging {onto}')
             self.merge_to_onto(onto, in_to_organize=in_to_organize)
 
     def merge_to_onto(self, onto2, in_to_organize=False):
         # add to onto1 the entries that are only in onto2
         onto2 = LeavedOnto(onto2)
+
+        if not self.onto1.ont.legend:
+            self.onto1.ont.legend = onto2.ont.legend
+
         if sorted(onto2.ont.legend) != sorted(self.onto1.ont.legend):
             raise SyntaxError(
                 "the two ontos need to have the same elements in the legend, in the same order."
@@ -104,6 +109,57 @@ class OntoManager:
                 to_merge[i] = (["to_organize"] + to_merge[i][0], to_merge[i][1])
 
         for path, entry in to_merge:
+            if path[0] == 'བྱ་གྲོགས།':
+                print()
+            self.__merge_origins_n_add(path, entry)
+
+        self.onto1._cleanup()
+
+    def __merge_origins_n_add(self, path, entry):
+        found = self.onto1.find_word(entry[0])
+        if found:
+            for f_path, f_entries in found:
+                if path == f_path:
+                    # same entry in same section -> may need to merge origins
+                    for f_e in f_entries:
+                        # prepare comparison of entry to add and found entry
+                        entry_no_origin = []
+                        f_e_no_origin = []
+                        entry_origin = ''
+                        f_e_origin = ''
+                        for el in self.onto1.ont.legend:
+                            if el == 'origin':
+                                entry_origin = self.onto1.get_field_value(entry, el)
+                                f_e_origin = self.onto1.get_field_value(f_e, el)
+                                e_el, f_el = '', ''
+                            else:
+                                e_el = self.onto1.get_field_value(entry, el)
+                                f_el = self.onto1.get_field_value(f_e, el)
+                            entry_no_origin.append(e_el)
+                            f_e_no_origin.append(f_el)
+
+                        if entry_no_origin != f_e_no_origin:
+                            # not the same entry -> add it normally
+                            self.onto1.ont.add(path, entry)
+                        else:
+                            # only difference is the origin -> merge origins in the trie
+                            # 1. remove old entry
+                            self.onto1.ont.remove_entry(path, f_e)
+                            print()
+                            # 2. merge origins and add new entry
+                            origs = []
+                            for o in [entry_origin, f_e_origin]:
+                                origs.extend(o.split(' — '))
+                            merged = ' — '.join(sorted(list(set(origs))))
+                            self.onto1.set_field_value(f_e_no_origin, 'origin', merged, mode='replace')
+                            self.onto1.ont.add(path, f_e_no_origin)
+
+                else:
+                    # same entries in different section -> add them normally
+                    for f_e in f_entries:
+                        self.onto1.ont.add(path, entry)
+        else:
+            # new entries - > add them normally
             self.onto1.ont.add(path, entry)
 
     def _entry_list2dict(self, entry):

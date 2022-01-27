@@ -64,6 +64,19 @@ class OntTrie:
             current_node.data.append(data)
             current_node.path = o_path
 
+    def remove_entry(self, path, entry):
+        queue = [self.head]
+        while queue:
+            current_node = queue.pop()
+            if current_node.leaf and current_node.path == path:
+                # remove entry ##
+                for n, e in enumerate(current_node.data):
+                    if e == entry:
+                        current_node.data = current_node.data[:n] + current_node.data[n+1:]
+                        return
+                #################
+            queue = [node for key, node in current_node.children.items()] + queue
+
     def find_entries(self, prefix=None, lemma=None, mode="entries"):
         """
         Returns a list of tuple(path, entry) in the trie that start with prefix.
@@ -113,7 +126,6 @@ class OntTrie:
                         results.append((current_node.path, lemma))
                     else:
                         raise ValueError('mode should be either "entries" or "lemmas".')
-                    results.append((current_node.path, current_node.data))
                 ##########################################################
 
             queue = [node for key, node in current_node.children.items()] + queue
