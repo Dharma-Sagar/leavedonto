@@ -77,8 +77,15 @@ class OntoManager:
 
         return only_in_base, shared, only_in_other
 
-    def batch_merge_to_onto(self, path_to_ontos, in_to_organize=False):
-        for onto in Path(path_to_ontos).glob('*.yaml'):
+    def batch_merge_to_onto(self, ontos, in_to_organize=False):
+        if isinstance(ontos, str) or isinstance(ontos, Path):
+            ontos = sorted(Path(ontos).glob('*.yaml'))
+        elif isinstance(ontos, list):
+            ontos = sorted(ontos)
+        else:
+            raise ValueError('ontos should be a str, a Path object or a list of filenames.')
+
+        for onto in ontos:
             print(f'merging {onto}')
             self.merge_to_onto(onto, in_to_organize=in_to_organize)
 
