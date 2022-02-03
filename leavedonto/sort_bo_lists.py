@@ -10,10 +10,7 @@ class SortBoLists(TibetanSort):
         first_els = []
         for n, list_ in enumerate(list_of_lists):
             els = [list_[i] if len(list_) >= i else '' for i in range(4)]
-            try:
-                first_els.append(f"{''.join(els)}—{n}")
-            except TypeError:
-                print()
+            first_els.append(f"{''.join(els)}—{n}")
         sorted_firsts = self.sort_list(first_els)
 
         # use position from sorted first elements to sort lists
