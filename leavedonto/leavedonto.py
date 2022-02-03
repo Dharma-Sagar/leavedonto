@@ -1,4 +1,5 @@
 from pathlib import Path
+from itertools import zip_longest
 
 import yaml
 
@@ -25,24 +26,53 @@ class LeavedOnto:
             self.ont = ont
             self.ont_path = ont_path
         else:
-            ValueError('either a dict or a filename or an OntTrie object')
+            ValueError("either a dict or a filename or an OntTrie object")
 
         self._cleanup()
 
-        self.convert2xlsx = Convert2Xlsx(self.ont_path, self.ont).convert2xlsx
-        self.convert2yaml = Convert2Yaml(self.ont_path, self.ont).convert2yaml
+    def convert2xlsx(self, out_path=None):
+        cx = Convert2Xlsx(self.ont_path, self.ont)
+        cx.convert2xlsx(out_path)
+
+    def convert2yaml(self, out_path=None):
+        cy = Convert2Yaml(self.ont_path, self.ont)
+        cy.convert2yaml(out_path)
 
     def find_word(self, word):
         return self.ont.find_entries(lemma=word)
 
+    def get_field_value(self, entry, field):
+        if field not in self.ont.legend:
+            raise IndexError(f"{field} not contained in legend:\n{self.ont.legend}")
+        for legend, value in zip_longest(self.ont.legend, entry):
+            if legend == field:
+                return value
+        return None
+
+    def set_field_value(self, entry, field, value, mode="append"):
+        if mode != "replace" and mode != "append":
+            raise ValueError('mode can be "replace" or "append"')
+        if field not in self.ont.legend:
+            raise IndexError(f"{field} not contained in legend:\n{self.ont.legend}")
+
+        for i, legend in enumerate(self.ont.legend):
+            if legend == field:
+                if mode == "replace":
+                    entry[i] = value
+                if mode == "append":
+                    parts = entry[i].split(" — ")
+                    parts.append(value)
+                    parts = sorted([p for p in set(parts) if p])
+                    entry[i] = " — ".join(parts)
+
     def _load(self):
-        if self.ont_path.suffix == '.xlsx':
+        if self.ont_path.suffix == ".xlsx":
             lx = LoadXlsx(self.ont_path)
             self.ont = lx.load_xlsx()
-        elif self.ont_path.suffix == '.yaml':
+        elif self.ont_path.suffix == ".yaml":
             self._load_yaml()
         else:
-            raise ValueError('only supports xlsx and yaml files.')
+            raise ValueError("only supports xlsx and yaml files.")
 
     def _load_yaml(self):
         ont_yaml = yaml.safe_load(self.ont_path.read_text())

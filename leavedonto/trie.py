@@ -59,15 +59,29 @@ class OntTrie:
         # adding data to the node
         if data:
             if not isinstance(data, list):
-                raise ValueError('data should be a list.')
+                raise ValueError("data should be a list.")
 
             current_node.data.append(data)
             current_node.path = o_path
 
-    def find_entries(self, prefix=None, lemma=None):
+    def remove_entry(self, path, entry):
+        queue = [self.head]
+        while queue:
+            current_node = queue.pop()
+            if current_node.leaf and current_node.path == path:
+                # remove entry ##
+                for n, e in enumerate(current_node.data):
+                    if e == entry:
+                        current_node.data = current_node.data[:n] + current_node.data[n+1:]
+                        return
+                #################
+            queue = [node for key, node in current_node.children.items()] + queue
+
+    def find_entries(self, prefix=None, lemma=None, mode="entries"):
         """
         Returns a list of tuple(path, entry) in the trie that start with prefix.
         In case prefix == None, all results are returned
+        In case mode == entries, return full entries, elif mode == lemmas, return only lemmas
         """
         results = []
 
@@ -76,6 +90,7 @@ class OntTrie:
             top_node = self.head
             queue = [node for key, node in top_node.children.items()]
         else:
+            prefix = [prefix] if isinstance(prefix, str) else prefix
             top_node = self.head
             for p in prefix:
                 if p in top_node.children:
@@ -94,11 +109,23 @@ class OntTrie:
                     matches = []
                     for entry in current_node.data:
                         if entry[0] == lemma:
-                            matches.append(lemma)
+                            if mode == "entries":
+                                matches.append(entry)
+                            elif mode == "lemmas":
+                                matches.append(lemma)
+                            else:
+                                raise ValueError(
+                                    'mode should be either "entries" or "lemmas".'
+                                )
                     if matches:
                         results.append((current_node.path, matches))
                 else:
-                    results.append((current_node.path, current_node.data))
+                    if mode == "entries":
+                        results.append((current_node.path, current_node.data))
+                    elif mode == "lemmas":
+                        results.append((current_node.path, lemma))
+                    else:
+                        raise ValueError('mode should be either "entries" or "lemmas".')
                 ##########################################################
 
             queue = [node for key, node in current_node.children.items()] + queue
@@ -110,7 +137,7 @@ class OntTrie:
         returns True at the first match, False otherwise
         """
         if not path and not lemma:
-            raise SyntaxError('at least one argument should be provided.')
+            raise SyntaxError("at least one argument should be provided.")
 
         # 1. parse through to the end of path,
         if not path:
@@ -137,7 +164,6 @@ class OntTrie:
                 if current_node.leaf:
                     # find matches ###########################################
                     if lemma:
-                        matches = []
                         for entry in current_node.data:
                             if entry[0] == lemma:
                                 return True
@@ -193,6 +219,5 @@ class OntTrie:
             return False
 
         # adding data
-
         current_node.data.append(data)
         return True

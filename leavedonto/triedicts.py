@@ -17,18 +17,20 @@ def trie_to_dicts(trie):
     #               {branch4: data2}
     #       }
     # }
-    dicts = {'legend': trie.legend, 'ont': {}}
+    dicts = {"legend": trie.legend, "ont": {}}
 
     all_branches = trie.find_entries()
     for branch in all_branches:
         path, entries = branch
         i = 0
         while i < len(path):
-            part = 'dicts["ont"]' + ''.join([f'["{p}"]' for p in path[:i]])
-            test_n_create_nested_dict = 'if path[i] not in ' + part + ':\n    ' + part + '[path[i]] = {}'
+            part = 'dicts["ont"]' + "".join([f'["{p}"]' for p in path[:i]])
+            test_n_create_nested_dict = (
+                "if path[i] not in " + part + ":\n    " + part + "[path[i]] = {}"
+            )
             exec(test_n_create_nested_dict)
             i += 1
-        exec('dicts["ont"]' + ''.join([f'["{p}"]' for p in path]) + ' = entries')
+        exec('dicts["ont"]' + "".join([f'["{p}"]' for p in path]) + " = entries")
 
     return dicts
 
@@ -37,7 +39,7 @@ class DictsToTrie:
     def __init__(self, dicts):
         self.dicts = dicts
         self.trie = OntTrie()
-        self.trie.legend = dicts['legend']
+        self.trie.legend = dicts["legend"]
 
         # vars
         self.words = None
@@ -49,7 +51,7 @@ class DictsToTrie:
     def convert(self):
         all_ = self.find_all_words()
         for a in all_:
-            path, entry = a['path'], a['entry']
+            path, entry = a["path"], a["entry"]
             self.trie.add(path, entry)
 
     def find_all_words(self):
@@ -62,7 +64,7 @@ class DictsToTrie:
     def list_words(self, ont=None, words=None):
         # initiate vars
         if not ont and not words:
-            ont = self.dicts['ont']
+            ont = self.dicts["ont"]
             words = self.words = []
 
         self.__recursive_list(ont)
@@ -80,23 +82,25 @@ class DictsToTrie:
         # initiate vars
         self.result_path = []
         self.found = []
-
-        self.__recursive_find(self.dicts['ont'], word)
+        level = 0
+        self.__recursive_find(self.dicts["ont"], word, level)
         return self.found
 
-    def __recursive_find(self, onto, word):
+    def __recursive_find(self, onto, word, level):
         for key, value in onto.items():
             self.result_path.append(key)
             if isinstance(value, dict):
-                self.__recursive_find(value, word)
+                self.__recursive_find(value, word, level + 1)
             else:
                 has_found = False
                 for entry in value:
                     if entry[0] == word:
-                        occ = {'path': self.result_path, 'entry': entry}
+                        occ = {"path": self.result_path, "entry": entry}
                         self.found.append(occ)
                         has_found = True
                 if has_found:
                     self.result_path = []
                 else:
                     self.result_path = self.result_path[:-1]
+        level -= 1
+        self.result_path = self.result_path[:-1]
