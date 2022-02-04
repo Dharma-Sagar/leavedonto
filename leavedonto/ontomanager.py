@@ -4,7 +4,7 @@ import yaml
 
 from .leavedonto import LeavedOnto
 from .trie import OntTrie
-from .tag_to_onto import generate_to_tag, tagged_to_trie, get_entries
+from .tag_to_onto import generate_to_tag, generate_to_tag_chunks, tagged_to_trie, get_entries
 
 
 class OntoManager:
@@ -54,6 +54,72 @@ class OntoManager:
         pos_list, levels, l_colors = fields.pop('pos'), fields.pop('levels'), fields.pop('l_colors')
         generate_to_tag(in_file, self.onto1, pos_list, levels, l_colors, out_file=out_file, fields=fields)
 
+    def tag_segmented_chunks(self, in_file, out_file=None, fields=dict):
+        # fields should at least contain "pos", "levels" and "l_colors" entries
+        if 'pos' not in fields:
+            raise ValueError('"pos" entry missing in fields')
+        if 'levels' not in fields:
+            raise ValueError('"levels" entry missing in fields')
+        if 'l_colors' not in fields:
+            raise ValueError('"l_colors" entry missing in fields')
+        pos_list, levels, l_colors = fields.pop('pos'), fields.pop('levels'), fields.pop('l_colors')
+
+        # segment text into chunks
+        chunks = self.__generate_chunks(in_file)
+
+        # write a config file that keeps the status of how each segment is parsed
+        conf_file = out_file.parent / (out_file.stem.split('_')[0] + '.config')
+        config = self.__load_chunks_config(conf_file, list(chunks.keys()))
+
+        # process chunks and update config
+        config = generate_to_tag_chunks(chunks, config, self.onto1, pos_list, levels, l_colors, out_file=out_file, fields=fields)
+        conf_file.write_text(yaml.safe_dump(config))
+
+        # return status for not
+        if 'todo' in config.values():
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def __generate_chunks(in_file, chunk_size=48):
+        # chunk_size is 4 lines of 12 words each
+        dump = in_file.read_text()
+        # create list of words
+        words = []
+        for line in dump.split('\n'):
+            w = line.strip().split(' ')
+            words.extend(w)
+
+        # create chunks
+        chunks = {}
+        chunk = []
+        c_count = 0
+        w_count = 0
+        for word in words:
+            if w_count < chunk_size - 1:
+                chunk.append(word)
+                w_count += 1
+            else:
+                chunk.append(word)
+                chunks[c_count] = chunk
+                c_count += 1
+                w_count = 0
+                chunk = []
+        if chunk:
+            chunks[c_count] = chunk
+
+        return chunks
+
+    @staticmethod
+    def __load_chunks_config(conf_file, chunks):
+        if not conf_file.is_file():
+            content = '\n'.join([f'{c}: todo' for c in chunks])
+            conf_file.write_text(content)
+            return yaml.safe_load(content)
+        else:
+            return yaml.safe_load(conf_file.read_text())
+
     def onto_from_tagged(self, in_file, out_file=None):
         # first merge all ontos you want, then generate onto from tagged
 
@@ -68,7 +134,7 @@ class OntoManager:
         if not out_file:
             out_file = in_file.parent / (in_file.stem + "_onto.yaml")
         onto = LeavedOnto(trie, out_file)
-        onto.convert2yaml()
+        onto.convert2yaml(out_path=out_file)
 
     @staticmethod
     def __expand_search_results(res):
