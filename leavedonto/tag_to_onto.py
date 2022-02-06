@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Protection
 from openpyxl.utils import coordinate_to_tuple
@@ -10,7 +12,7 @@ from .utils import resize_sheet
 def tagged_to_trie(tagged, onto_basis):
     trie = OntTrie()
     trie.legend = onto_basis.ont.legend
-    for word, pos, level in tagged:
+    for word, pos, level, freq in tagged:
         found = onto_basis.ont.find_entries(prefix=pos, lemma=word)
         if found:
             for path, entries in found:
@@ -20,7 +22,7 @@ def tagged_to_trie(tagged, onto_basis):
                         trie.add(path, e)
         else:
             path = [pos, "to_organize"]
-            parts = {"word": word, "POS": pos, "level": level}
+            parts = {"word": word, "POS": pos, "level": level, "freq": freq}
             entry = [parts[l] if l in parts else "" for l in onto_basis.ont.legend]
             trie.add(path, entry)
     return trie
@@ -31,7 +33,7 @@ def get_entries(in_file):
     ws = wb.active
 
     # from sheet to list of lists
-    tagged = []
+    tagged = defaultdict(int)
     max_row, max_col = coordinate_to_tuple(ws.dimensions.split(":")[1])
     for r in range(1, max_row + 1, 4):
         for col in range(1, max_col + 1):
@@ -40,9 +42,9 @@ def get_entries(in_file):
             pos = ws.cell(r + 1, col).value
             level = ws.cell(r + 2, col).value
             entry = (word, pos, level)
-            if word and pos and level and entry not in tagged:
-                tagged.append(entry)
-
+            if word and pos and level:
+                tagged[entry] += 1
+    tagged = [(a[0], a[1], a[2], f) for a, f in tagged.items()]
     return tagged
 
 
