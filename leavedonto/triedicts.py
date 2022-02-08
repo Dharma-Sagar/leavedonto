@@ -28,7 +28,10 @@ def trie_to_dicts(trie):
             test_n_create_nested_dict = (
                 "if path[i] not in " + part + ":\n    " + part + "[path[i]] = {}"
             )
-            exec(test_n_create_nested_dict)
+            try:
+                exec(test_n_create_nested_dict)
+            except TypeError:
+                print()
             i += 1
         exec('dicts["ont"]' + "".join([f'["{p}"]' for p in path]) + " = entries")
 
@@ -99,7 +102,7 @@ class DictsToTrie:
                         self.found.append(occ)
                         has_found = True
                 if has_found:
-                    self.result_path = []
+                    self.result_path = self.result_path[:level]
                 else:
                     self.result_path = self.result_path[:-1]
         level -= 1
