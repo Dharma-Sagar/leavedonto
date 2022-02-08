@@ -1,10 +1,11 @@
+from copy import deepcopy
 from pathlib import Path
 
 import yaml
 
 from .leavedonto import LeavedOnto
 from .trie import OntTrie
-from .tag_to_onto import generate_to_tag, tagged_to_trie, get_entries
+from .tag_to_onto import generate_to_tag, generate_to_tag_chunks, tagged_to_trie, get_entries
 
 
 class OntoManager:
@@ -43,39 +44,138 @@ class OntoManager:
         else:
             raise SyntaxError("either all, base_only, other_only or shared")
 
-    def tag_segmented(self, in_file, out_file=None):
-        generate_to_tag(in_file, self.onto1, out_file=out_file)
+    def __find_differences(self, onto2, mode="all"):
+        to_ignore = ["freq", "origin"]
+        # comparison is done on cleaned entries ; original entries are returned
+        entries_base = self.__expand_search_results(self.onto1.ont.find_entries())
+        entries_base_cleaned = self.__clean_exported_entries(entries_base, to_ignore)
+        entries_other = self.__expand_search_results(onto2.ont.find_entries())
+        entries_other_cleaned = self.__clean_exported_entries(entries_other, to_ignore)
+
+        only_in_base, only_in_other, shared = None, None, None
+        if mode == "all" or mode == "base_only":
+            only_in_base = [entries_base[n] for n, e in enumerate(entries_base_cleaned) if e not in entries_other_cleaned]
+        if mode == "all" or mode == "other_only":
+            only_in_other = [entries_other[n] for n, e in enumerate(entries_other_cleaned) if e not in entries_base_cleaned]
+        if mode == "all" or mode == "shared":
+            shared = []
+            for n, o in enumerate(entries_other_cleaned):
+                if o in entries_base_cleaned:
+                    m = 0
+                    for m, b in enumerate(entries_base_cleaned):
+                        if o == b:
+                            break
+                    shared.append((entries_base[m], entries_other[n]))
+        return only_in_base, shared, only_in_other
+
+    @staticmethod
+    def __expand_search_results(res):
+        return [(path, e) for path, entries in res for e in entries]
+
+    def __clean_exported_entries(self, entries, ignore_fields):
+        if not entries:
+            return entries
+
+        cleaned = []
+        for path_, entry in entries:
+            new = deepcopy(entry)
+            for i in ignore_fields:
+                self.onto1.set_field_value(new, i, '', mode="replace")
+            cleaned.append((path_, new))
+        return cleaned
+
+    def tag_segmented(self, in_file, out_file=None, fields=dict):
+        # fields should at least contain "pos", "levels" and "l_colors" entries
+        if 'pos' not in fields:
+            raise ValueError('"pos" entry missing in fields')
+        if 'levels' not in fields:
+            raise ValueError('"levels" entry missing in fields')
+        if 'l_colors' not in fields:
+            raise ValueError('"l_colors" entry missing in fields')
+        pos_list, levels, l_colors = fields.pop('pos'), fields.pop('levels'), fields.pop('l_colors')
+        generate_to_tag(in_file, self.onto1, pos_list, levels, l_colors, out_file=out_file, fields=fields)
+
+    def tag_segmented_chunks(self, in_file, out_file=None, fields=dict):
+        # fields should at least contain "pos", "levels" and "l_colors" entries
+        if 'pos' not in fields:
+            raise ValueError('"pos" entry missing in fields')
+        if 'levels' not in fields:
+            raise ValueError('"levels" entry missing in fields')
+        if 'l_colors' not in fields:
+            raise ValueError('"l_colors" entry missing in fields')
+        pos_list, levels, l_colors = fields.pop('pos'), fields.pop('levels'), fields.pop('l_colors')
+
+        # segment text into chunks
+        chunks = self.__generate_chunks(in_file)
+
+        # write a config file that keeps the status of how each segment is parsed
+        conf_file = out_file.parent / (out_file.stem.split('_')[0] + '.config')
+        config = self.__load_chunks_config(conf_file, list(chunks.keys()))
+
+        # process chunks and update config
+        config = generate_to_tag_chunks(chunks, config, self.onto1, pos_list, levels, l_colors, out_file=out_file, fields=fields)
+        conf_file.write_text(yaml.safe_dump(config))
+
+        # return status for not
+        if 'todo' in config.values():
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def __generate_chunks(in_file, chunk_size=48):
+        # chunk_size is 4 lines of 12 words each
+        dump = in_file.read_text()
+        # create list of words
+        words = []
+        for line in dump.split('\n'):
+            w = line.strip().split(' ')
+            words.extend(w)
+
+        # create chunks
+        chunks = {}
+        chunk = []
+        c_count = 0
+        w_count = 0
+        for word in words:
+            if w_count < chunk_size - 1:
+                chunk.append(word)
+                w_count += 1
+            else:
+                chunk.append(word)
+                chunks[c_count] = chunk
+                c_count += 1
+                w_count = 0
+                chunk = []
+        if chunk:
+            chunks[c_count] = chunk
+
+        return chunks
+
+    @staticmethod
+    def __load_chunks_config(conf_file, chunks):
+        if not conf_file.is_file():
+            content = '\n'.join([f'{c}: todo' for c in chunks])
+            conf_file.write_text(content)
+            return yaml.safe_load(content)
+        else:
+            return yaml.safe_load(conf_file.read_text())
 
     def onto_from_tagged(self, in_file, out_file=None):
         # first merge all ontos you want, then generate onto from tagged
 
         # load words and tags
         tagged = get_entries(in_file)
+        if not tagged:
+            print(f'{in_file} has no tagged word. Please tag and rerun.')
+            return
         # generate trie
         trie = tagged_to_trie(tagged, self.onto1)
         # write it to out_file
         if not out_file:
             out_file = in_file.parent / (in_file.stem + "_onto.yaml")
         onto = LeavedOnto(trie, out_file)
-        onto.convert2yaml()
-
-    @staticmethod
-    def __expand_search_results(res):
-        return [(path, e) for path, entries in res for e in entries]
-
-    def __find_differences(self, onto2, mode="all"):
-        entries_base = self.__expand_search_results(self.onto1.ont.find_entries())
-        entries_other = self.__expand_search_results(onto2.ont.find_entries())
-
-        only_in_base, only_in_other, shared = None, None, None
-        if mode == "all" or mode == "base_only":
-            only_in_base = [e for e in entries_base if e not in entries_other]
-        if mode == "all" or mode == "other_only":
-            only_in_other = [e for e in entries_other if e not in entries_base]
-        if mode == "all" or mode == "shared":
-            shared = [e for e in entries_other if e in entries_base]
-
-        return only_in_base, shared, only_in_other
+        onto.convert2yaml(out_path=out_file)
 
     def batch_merge_to_onto(self, ontos, in_to_organize=False):
         if isinstance(ontos, str) or isinstance(ontos, Path):
@@ -102,14 +202,20 @@ class OntoManager:
                 "\nPlease retry after that."
             )
 
-        to_merge = self.diff_ontos(onto2, mode="other_only")
+        _, shared, other_only = self.diff_ontos(onto2, mode="all")
+        shared = [s[1] for s in shared]  # only keeping entries from onto2. (shared contains both)
+        to_merge = shared + other_only
 
-        # add origin to entries
-        for i, t in enumerate(to_merge):
-            path, entry = t[0], t[1]
-            self.onto1.set_field_value(
-                entry, "origin", onto2.ont_path.stem.split("_")[0]
-            )
+        def add_origin(entries):
+            for i, t in enumerate(entries):
+                path, entry = t[0], t[1]
+                self.onto1.set_field_value(
+                    entry, "origin", onto2.ont_path.stem.split("_")[0]
+                )
+            return entries
+
+        # add origins
+        to_merge = add_origin(to_merge)
 
         if in_to_organize:
             for i in range(len(to_merge)):
@@ -128,35 +234,55 @@ class OntoManager:
                     # same entry in same section -> may need to merge origins
                     for f_e in f_entries:
                         # prepare comparison of entry to add and found entry
-                        entry_no_origin = []
-                        f_e_no_origin = []
+                        entry_clean = []
+                        f_e_clean = []
                         entry_origin = ''
                         f_e_origin = ''
+                        entry_freq = ''
+                        f_e_freq = ''
                         for el in self.onto1.ont.legend:
                             if el == 'origin':
                                 entry_origin = self.onto1.get_field_value(entry, el)
                                 f_e_origin = self.onto1.get_field_value(f_e, el)
                                 e_el, f_el = '', ''
+                            elif el == 'freq':
+                                entry_freq = self.onto1.get_field_value(entry, el)
+                                f_e_freq = self.onto1.get_field_value(f_e, el)
+                                e_el, f_el = '', ''
                             else:
                                 e_el = self.onto1.get_field_value(entry, el)
                                 f_el = self.onto1.get_field_value(f_e, el)
-                            entry_no_origin.append(e_el)
-                            f_e_no_origin.append(f_el)
+                            entry_clean.append(e_el)
+                            f_e_clean.append(f_el)
 
-                        if entry_no_origin != f_e_no_origin:
+                        if entry_clean != f_e_clean:
                             # not the same entry -> add it normally
                             self.onto1.ont.add(path, entry)
                         else:
                             # only difference is the origin -> merge origins in the trie
                             # 1. remove old entry
                             self.onto1.ont.remove_entry(path, f_e)
-                            # 2. merge origins and add new entry
+
+                            # 2. merge origins
                             origs = []
                             for o in [entry_origin, f_e_origin]:
                                 origs.extend(o.split(' — '))
-                            merged = ' — '.join(sorted(list(set(origs))))
-                            self.onto1.set_field_value(f_e_no_origin, 'origin', merged, mode='replace')
-                            self.onto1.ont.add(path, f_e_no_origin)
+                            merged_origs = ' — '.join(sorted(list(set(origs))))
+                            self.onto1.set_field_value(f_e_clean, 'origin', merged_origs, mode='replace')
+
+                            # 3. merge freqs
+                            merged_freq = 0
+                            for f in [entry_freq, f_e_freq]:
+                                try:
+                                    f = int(f)
+                                except ValueError:
+                                    f = 0
+                                    pass
+                                merged_freq += f
+                            self.onto1.set_field_value(f_e_clean, 'freq', merged_freq, mode='replace')
+
+                            # add new entry
+                            self.onto1.ont.add(path, f_e_clean)
 
                 else:
                     # same entries in different section -> add them normally
@@ -165,48 +291,6 @@ class OntoManager:
         else:
             # new entries - > add them normally
             self.onto1.ont.add(path, entry)
-
-    def _entry_list2dict(self, entry):
-        p, e = entry["path"], entry["entry"]
-        e = self.__leaf_dict2list(e)
-        new = {}
-        for n, el in enumerate(reversed(p)):
-            if n == 0:
-                new[el] = e
-            else:
-                new = {el: new}
-        return new
-
-    def __leaf_dict2list(self, leaf):
-        return [leaf[L] for L in self.onto1.ont["legend"]]
-
-    def _filter_entries(self, onto):
-        def has_same_path(r_):
-            out = [True for rr in ref_res if rr["path"] == r_["path"]]
-            return True if out else False
-
-        def has_same_lemma(r_):
-            out = [
-                True
-                for rr in ref_res
-                if rr["entry"]["col1_legend"] == r_["entry"]["col1_legend"]
-            ]
-            return True if out else False
-
-        to_update = []
-        to_organize = []
-        words = onto.list_words()
-        for w in words:
-            res = onto.find_word(w)
-            ref_res = self.onto1.find_word(w)
-            for r in res:
-                if r in ref_res:
-                    continue
-                elif has_same_path(r) and has_same_lemma(r):
-                    to_update.append(r)
-                else:
-                    to_organize.append(r)
-        return to_update, to_organize
 
     def adjust_legends(self):
         template = "# legend list from the original onto.\n" \
