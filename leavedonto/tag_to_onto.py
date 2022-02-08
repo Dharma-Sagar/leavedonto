@@ -13,17 +13,14 @@ def tagged_to_trie(tagged, onto_basis):
     trie = OntTrie()
     trie.legend = onto_basis.ont.legend
     for word, pos, level, freq in tagged:
+        parts = {"word": word, "POS": pos, "level": level, "freq": freq}
+        entry = [parts[l] if l in parts else "" for l in onto_basis.ont.legend]
         found = onto_basis.ont.find_entries(prefix=pos, lemma=word)
         if found:
-            for path, entries in found:
-                for e in entries:
-                    found_level = onto_basis.get_field_value(e, "level")
-                    if found_level == level:
-                        trie.add(path, e)
+            found_path = found[0][0]  # choose path of first found entry
+            trie.add(found_path, entry)
         else:
             path = [pos, "to_organize"]
-            parts = {"word": word, "POS": pos, "level": level, "freq": freq}
-            entry = [parts[l] if l in parts else "" for l in onto_basis.ont.legend]
             trie.add(path, entry)
     return trie
 
