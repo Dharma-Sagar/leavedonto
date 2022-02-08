@@ -1,3 +1,4 @@
+from copy import deepcopy
 from pathlib import Path
 
 import yaml
@@ -42,6 +43,46 @@ class OntoManager:
             return shared
         else:
             raise SyntaxError("either all, base_only, other_only or shared")
+
+    def __find_differences(self, onto2, mode="all"):
+        to_ignore = ["freq", "origin"]
+        # comparison is done on cleaned entries ; original entries are returned
+        entries_base = self.__expand_search_results(self.onto1.ont.find_entries())
+        entries_base_cleaned = self.__clean_exported_entries(entries_base, to_ignore)
+        entries_other = self.__expand_search_results(onto2.ont.find_entries())
+        entries_other_cleaned = self.__clean_exported_entries(entries_other, to_ignore)
+
+        only_in_base, only_in_other, shared = None, None, None
+        if mode == "all" or mode == "base_only":
+            only_in_base = [entries_base[n] for n, e in enumerate(entries_base_cleaned) if e not in entries_other_cleaned]
+        if mode == "all" or mode == "other_only":
+            only_in_other = [entries_other[n] for n, e in enumerate(entries_other_cleaned) if e not in entries_base_cleaned]
+        if mode == "all" or mode == "shared":
+            shared = []
+            for n, o in enumerate(entries_other_cleaned):
+                if o in entries_base_cleaned:
+                    m = 0
+                    for m, b in enumerate(entries_base_cleaned):
+                        if o == b:
+                            break
+                    shared.append((entries_base[m], entries_other[n]))
+        return only_in_base, shared, only_in_other
+
+    @staticmethod
+    def __expand_search_results(res):
+        return [(path, e) for path, entries in res for e in entries]
+
+    def __clean_exported_entries(self, entries, ignore_fields):
+        if not entries:
+            return entries
+
+        cleaned = []
+        for path_, entry in entries:
+            new = deepcopy(entry)
+            for i in ignore_fields:
+                self.onto1.set_field_value(new, i, '', mode="replace")
+            cleaned.append((path_, new))
+        return cleaned
 
     def tag_segmented(self, in_file, out_file=None, fields=dict):
         # fields should at least contain "pos", "levels" and "l_colors" entries
@@ -136,24 +177,6 @@ class OntoManager:
         onto = LeavedOnto(trie, out_file)
         onto.convert2yaml(out_path=out_file)
 
-    @staticmethod
-    def __expand_search_results(res):
-        return [(path, e) for path, entries in res for e in entries]
-
-    def __find_differences(self, onto2, mode="all"):
-        entries_base = self.__expand_search_results(self.onto1.ont.find_entries())
-        entries_other = self.__expand_search_results(onto2.ont.find_entries())
-
-        only_in_base, only_in_other, shared = None, None, None
-        if mode == "all" or mode == "base_only":
-            only_in_base = [e for e in entries_base if e not in entries_other]
-        if mode == "all" or mode == "other_only":
-            only_in_other = [e for e in entries_other if e not in entries_base]
-        if mode == "all" or mode == "shared":
-            shared = [e for e in entries_other if e in entries_base]
-
-        return only_in_base, shared, only_in_other
-
     def batch_merge_to_onto(self, ontos, in_to_organize=False):
         if isinstance(ontos, str) or isinstance(ontos, Path):
             ontos = sorted(Path(ontos).glob('*.yaml'))
@@ -179,25 +202,35 @@ class OntoManager:
                 "\nPlease retry after that."
             )
 
-        to_merge = self.diff_ontos(onto2, mode="other_only")
+        _, shared, other_only = self.diff_ontos(onto2, mode="all")
+        shared = [s[1] for s in shared]  # only keeping entries from onto2. (shared contains both)
+        to_merge = shared + other_only
 
-        # add origin to entries
-        for i, t in enumerate(to_merge):
-            path, entry = t[0], t[1]
-            self.onto1.set_field_value(
-                entry, "origin", onto2.ont_path.stem.split("_")[0]
-            )
+        def add_origin(entries):
+            for i, t in enumerate(entries):
+                path, entry = t[0], t[1]
+                self.onto1.set_field_value(
+                    entry, "origin", onto2.ont_path.stem.split("_")[0]
+                )
+            return entries
+
+        # add origins
+        to_merge = add_origin(to_merge)
 
         if in_to_organize:
             for i in range(len(to_merge)):
                 to_merge[i] = (["to_organize"] + to_merge[i][0], to_merge[i][1])
 
         for path, entry in to_merge:
+            if entry[0] == 'མིང་':
+                print()
             self.__merge_origins_n_add(path, entry)
 
         self.onto1._cleanup()
 
     def __merge_origins_n_add(self, path, entry):
+        if entry[0] == 'གཉིས་':
+            print()
         found = self.onto1.find_word(entry[0])
         if found:
             for f_path, f_entries in found:
@@ -205,35 +238,48 @@ class OntoManager:
                     # same entry in same section -> may need to merge origins
                     for f_e in f_entries:
                         # prepare comparison of entry to add and found entry
-                        entry_no_origin = []
-                        f_e_no_origin = []
+                        entry_clean = []
+                        f_e_clean = []
                         entry_origin = ''
                         f_e_origin = ''
+                        entry_freq = ''
+                        f_e_freq = ''
                         for el in self.onto1.ont.legend:
                             if el == 'origin':
                                 entry_origin = self.onto1.get_field_value(entry, el)
                                 f_e_origin = self.onto1.get_field_value(f_e, el)
                                 e_el, f_el = '', ''
+                            elif el == 'freq':
+                                entry_freq = self.onto1.get_field_value(entry, el)
+                                f_e_freq = self.onto1.get_field_value(f_e, el)
+                                e_el, f_el = '', ''
                             else:
                                 e_el = self.onto1.get_field_value(entry, el)
                                 f_el = self.onto1.get_field_value(f_e, el)
-                            entry_no_origin.append(e_el)
-                            f_e_no_origin.append(f_el)
+                            entry_clean.append(e_el)
+                            f_e_clean.append(f_el)
 
-                        if entry_no_origin != f_e_no_origin:
+                        if entry_clean != f_e_clean:
                             # not the same entry -> add it normally
                             self.onto1.ont.add(path, entry)
                         else:
                             # only difference is the origin -> merge origins in the trie
                             # 1. remove old entry
                             self.onto1.ont.remove_entry(path, f_e)
-                            # 2. merge origins and add new entry
+
+                            # 2. merge origins
                             origs = []
                             for o in [entry_origin, f_e_origin]:
                                 origs.extend(o.split(' — '))
-                            merged = ' — '.join(sorted(list(set(origs))))
-                            self.onto1.set_field_value(f_e_no_origin, 'origin', merged, mode='replace')
-                            self.onto1.ont.add(path, f_e_no_origin)
+                            merged_origs = ' — '.join(sorted(list(set(origs))))
+                            self.onto1.set_field_value(f_e_clean, 'origin', merged_origs, mode='replace')
+
+                            # 3. merge freqs
+                            merged_freq = entry_freq + f_e_freq
+                            self.onto1.set_field_value(f_e_clean, 'freq', merged_freq, mode='replace')
+
+                            # add new entry
+                            self.onto1.ont.add(path, f_e_clean)
 
                 else:
                     # same entries in different section -> add them normally
@@ -242,48 +288,6 @@ class OntoManager:
         else:
             # new entries - > add them normally
             self.onto1.ont.add(path, entry)
-
-    def _entry_list2dict(self, entry):
-        p, e = entry["path"], entry["entry"]
-        e = self.__leaf_dict2list(e)
-        new = {}
-        for n, el in enumerate(reversed(p)):
-            if n == 0:
-                new[el] = e
-            else:
-                new = {el: new}
-        return new
-
-    def __leaf_dict2list(self, leaf):
-        return [leaf[L] for L in self.onto1.ont["legend"]]
-
-    def _filter_entries(self, onto):
-        def has_same_path(r_):
-            out = [True for rr in ref_res if rr["path"] == r_["path"]]
-            return True if out else False
-
-        def has_same_lemma(r_):
-            out = [
-                True
-                for rr in ref_res
-                if rr["entry"]["col1_legend"] == r_["entry"]["col1_legend"]
-            ]
-            return True if out else False
-
-        to_update = []
-        to_organize = []
-        words = onto.list_words()
-        for w in words:
-            res = onto.find_word(w)
-            ref_res = self.onto1.find_word(w)
-            for r in res:
-                if r in ref_res:
-                    continue
-                elif has_same_path(r) and has_same_lemma(r):
-                    to_update.append(r)
-                else:
-                    to_organize.append(r)
-        return to_update, to_organize
 
     def adjust_legends(self):
         template = "# legend list from the original onto.\n" \
