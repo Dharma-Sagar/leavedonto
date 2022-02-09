@@ -1,3 +1,5 @@
+from collections import defaultdict
+from copy import deepcopy
 from pathlib import Path
 
 import yaml
@@ -94,7 +96,7 @@ class OntoManager:
         pos_list, levels, l_colors = fields.pop('pos'), fields.pop('levels'), fields.pop('l_colors')
         generate_to_tag(in_file, self.onto1, pos_list, levels, l_colors, out_file=out_file, fields=fields)
 
-    def tag_segmented_chunks(self, in_file, out_file=None, fields=dict):
+    def tag_segmented_chunks(self, in_file, out_file=None, line_mode="chunk", fields=dict):
         # fields should at least contain "pos", "levels" and "l_colors" entries
         if 'pos' not in fields:
             raise ValueError('"pos" entry missing in fields')
@@ -105,14 +107,14 @@ class OntoManager:
         pos_list, levels, l_colors = fields.pop('pos'), fields.pop('levels'), fields.pop('l_colors')
 
         # segment text into chunks
-        chunks = self.__generate_chunks(in_file)
+        chunks = self.__generate_chunks(in_file, line_mode)
 
         # write a config file that keeps the status of how each segment is parsed
         conf_file = out_file.parent / (out_file.stem.split('_')[0] + '.config')
         config = self.__load_chunks_config(conf_file, list(chunks.keys()))
 
         # process chunks and update config
-        config = generate_to_tag_chunks(chunks, config, self.onto1, pos_list, levels, l_colors, out_file=out_file, fields=fields)
+        config = generate_to_tag_chunks(chunks, config, self.onto1, line_mode, pos_list, levels, l_colors, out_file=out_file, fields=fields)
         conf_file.write_text(yaml.safe_dump(config))
 
         # return status for not
@@ -122,26 +124,36 @@ class OntoManager:
             return False
 
     @staticmethod
-    def __generate_chunks(in_file, chunk_size=48):
-        # chunk_size is 4 lines of 12 words each
-        dump = in_file.read_text()
-        # create list of words
-        words = []
-        for line in dump.split('\n'):
-            w = line.strip().split(' ')
-            words.extend(w)
+    def __generate_chunks(in_file, line_mode):
+        dump = in_file.read_text().strip().strip('\ufeff')
+
+        if line_mode == "sentence":
+            chunk_size = 4  # sentences
+            units = []
+            for line in dump.split('\n'):
+                w = line.strip().split(' ')
+                units.append(w)
+        elif line_mode == "chunk":
+            chunk_size = 48  # words
+            # create list of words
+            units = []
+            for line in dump.split('\n'):
+                w = line.strip().split(' ')
+                units.extend(w)
+        else:
+            raise SyntaxError('line_mode is either "sentence" or "chunk".')
 
         # create chunks
         chunks = {}
         chunk = []
         c_count = 0
         w_count = 0
-        for word in words:
+        for unit in units:
             if w_count < chunk_size - 1:
-                chunk.append(word)
+                chunk.append(unit)
                 w_count += 1
             else:
-                chunk.append(word)
+                chunk.append(unit)
                 chunks[c_count] = chunk
                 c_count += 1
                 w_count = 0
@@ -208,9 +220,9 @@ class OntoManager:
         def add_origin(entries):
             for i, t in enumerate(entries):
                 path, entry = t[0], t[1]
-                self.onto1.set_field_value(
-                    entry, "origin", onto2.ont_path.stem.split("_")[0]
-                )
+                origin = onto2.ont_path.stem.split("_")[0]
+                origin += f':{self.onto1.get_field_value(entry, "freq")}'
+                self.onto1.set_field_value(entry, "origin", origin)
             return entries
 
         # add origins
@@ -263,10 +275,13 @@ class OntoManager:
                             self.onto1.ont.remove_entry(path, f_e)
 
                             # 2. merge origins
-                            origs = []
+                            origs = defaultdict(int)
                             for o in [entry_origin, f_e_origin]:
-                                origs.extend(o.split(' — '))
-                            merged_origs = ' — '.join(sorted(list(set(origs))))
+                                for orig in o.split(' — '):
+                                    a, b = orig.split(':')
+                                    origs[a] += int(b)
+                            origs = [f'{a}:{b}' for a, b in origs.items()]
+                            merged_origs = ' — '.join(sorted(origs))
                             self.onto1.set_field_value(f_e_clean, 'origin', merged_origs, mode='replace')
 
                             # 3. merge freqs
@@ -340,3 +355,6 @@ class OntoManager:
                     new_entry = [new[e] for e in l_new]
                     current_node.data[n] = new_entry
             queue = [node for key, node in current_node.children.items()] + queue
+
+    def recompose_ontos(self):
+        print()

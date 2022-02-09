@@ -130,7 +130,7 @@ def generate_to_tag(in_file, onto, pos_list, levels, l_colors, out_file=None, fi
     wb.save(out_file)
 
 
-def generate_to_tag_chunks(chunks, config, onto, pos_list, levels, l_colors, out_file, fields=dict):
+def generate_to_tag_chunks(chunks, config, onto, line_mode, pos_list, levels, l_colors, out_file, fields=dict):
     # first load all the ontos you need in OntoManager, then run
     font = "Jomolhari"
     ft_words = Font(font, size=13, color="004e4f54")
@@ -166,7 +166,7 @@ def generate_to_tag_chunks(chunks, config, onto, pos_list, levels, l_colors, out
             config[c_count] = 'done'
 
             # read input file into rows
-            rows = rows_from_lines(chunk)
+            rows = rows_from_lines(chunk, line_mode)
             row_start = c_count * 4 * 4
             for n, r in enumerate(rows):
                 row = row_start + n * 4 + 1
@@ -230,25 +230,27 @@ def generate_to_tag_chunks(chunks, config, onto, pos_list, levels, l_colors, out
     return config
 
 
-def rows_from_lines(lines, mode='lines'):
-    row_size = 12
+def rows_from_lines(lines, line_mode):
+    if line_mode == 'sentence':
+        return lines
 
-    if mode == 'lines':
-        words = []
-        for l in lines:
-            words.extend(l.split(" "))
-    else:
-        words = lines
+    elif line_mode == 'chunk':
+        row_size = 12
 
-    rows = []
-    cur_row = []
-    while words:
-        cur_row.append(words.pop(0))
+        words = [l for line in lines for l in line]
 
-        if len(cur_row) == row_size:
+        rows = []
+        cur_row = []
+        while words:
+            cur_row.append(words.pop(0))
+
+            if len(cur_row) == row_size:
+                rows.append(cur_row)
+                cur_row = []
+        if cur_row:
             rows.append(cur_row)
-            cur_row = []
-    if cur_row:
-        rows.append(cur_row)
 
-    return rows
+        return rows
+
+    else:
+        raise SyntaxError('line_mode is either "sentence" or "chunk".')
