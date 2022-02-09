@@ -33,7 +33,14 @@ class Convert2Yaml:
         legend = "- "
         processed = []
         cur_idx = 0
-        lines = out.split("\n")
+        lines_with_split_long_lines = out.split("\n")
+        lines = []
+        for line in lines_with_split_long_lines:
+            if line.lstrip().startswith('-') or line.rstrip().endswith(':'):
+                lines.append(line)
+            else:
+                lines[-1] = lines[-1].rstrip() + ' ' + line.lstrip()
+
         while cur_idx < len(lines):
             cur_line = lines[cur_idx]
             if start not in cur_line and not cur_line.startswith(legend):
@@ -60,7 +67,7 @@ class Convert2Yaml:
                 prefix = cur_line[: cur_line.find(start)]
                 group = [cur_line]
                 cur_idx += 1
-                while lines[cur_idx].startswith(f"{prefix}  -"):
+                while cur_idx < len(lines) and lines[cur_idx].startswith(f"{prefix}  -"):
                     group.append(lines[cur_idx])
                     cur_idx += 1
                 cur_idx -= 1  # undo extra increment
