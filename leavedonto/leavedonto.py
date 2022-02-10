@@ -65,6 +65,9 @@ class LeavedOnto:
                     parts = sorted([p for p in set(parts) if p])
                     entry[i] = " — ".join(parts)
 
+    def set_legend(self, legend):
+        self.ont.legend = legend
+
     def _load(self):
         if self.ont_path.suffix == ".xlsx":
             lx = LoadXlsx(self.ont_path)

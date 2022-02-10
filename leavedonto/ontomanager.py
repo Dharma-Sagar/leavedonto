@@ -237,8 +237,9 @@ class OntoManager:
 
         self.onto1._cleanup()
 
-    def __merge_origins_n_add(self, path, entry):
-        found = self.onto1.find_word(entry[0])
+    def __merge_origins_n_add(self, path, entry, onto=None):
+        onto = self.onto1 if not onto else onto
+        found = onto.find_word(entry[0])
         if found:
             for f_path, f_entries in found:
                 if path == f_path:
@@ -251,28 +252,28 @@ class OntoManager:
                         f_e_origin = ''
                         entry_freq = ''
                         f_e_freq = ''
-                        for el in self.onto1.ont.legend:
+                        for el in onto.ont.legend:
                             if el == 'origin':
-                                entry_origin = self.onto1.get_field_value(entry, el)
-                                f_e_origin = self.onto1.get_field_value(f_e, el)
+                                entry_origin = onto.get_field_value(entry, el)
+                                f_e_origin = onto.get_field_value(f_e, el)
                                 e_el, f_el = '', ''
                             elif el == 'freq':
-                                entry_freq = self.onto1.get_field_value(entry, el)
-                                f_e_freq = self.onto1.get_field_value(f_e, el)
+                                entry_freq = onto.get_field_value(entry, el)
+                                f_e_freq = onto.get_field_value(f_e, el)
                                 e_el, f_el = '', ''
                             else:
-                                e_el = self.onto1.get_field_value(entry, el)
-                                f_el = self.onto1.get_field_value(f_e, el)
+                                e_el = onto.get_field_value(entry, el)
+                                f_el = onto.get_field_value(f_e, el)
                             entry_clean.append(e_el)
                             f_e_clean.append(f_el)
 
                         if entry_clean != f_e_clean:
                             # not the same entry -> add it normally
-                            self.onto1.ont.add(path, entry)
+                            onto.ont.add(path, entry)
                         else:
                             # only difference is the origin -> merge origins in the trie
                             # 1. remove old entry
-                            self.onto1.ont.remove_entry(path, f_e)
+                            onto.ont.remove_entry(path, f_e)
 
                             # 2. merge origins
                             origs = defaultdict(int)
@@ -282,7 +283,7 @@ class OntoManager:
                                     origs[a] += int(b)
                             origs = [f'{a}:{b}' for a, b in origs.items()]
                             merged_origs = ' — '.join(sorted(origs))
-                            self.onto1.set_field_value(f_e_clean, 'origin', merged_origs, mode='replace')
+                            onto.set_field_value(f_e_clean, 'origin', merged_origs, mode='replace')
 
                             # 3. merge freqs
                             merged_freq = 0
@@ -293,18 +294,18 @@ class OntoManager:
                                     f = 0
                                     pass
                                 merged_freq += f
-                            self.onto1.set_field_value(f_e_clean, 'freq', merged_freq, mode='replace')
+                            onto.set_field_value(f_e_clean, 'freq', merged_freq, mode='replace')
 
                             # add new entry
-                            self.onto1.ont.add(path, f_e_clean)
+                            onto.ont.add(path, f_e_clean)
 
                 else:
                     # same entries in different section -> add them normally
                     for f_e in f_entries:
-                        self.onto1.ont.add(path, entry)
+                        onto.ont.add(path, entry)
         else:
             # new entries - > add them normally
-            self.onto1.ont.add(path, entry)
+            onto.ont.add(path, entry)
 
     def adjust_legends(self):
         template = "# legend list from the original onto.\n" \
@@ -356,5 +357,44 @@ class OntoManager:
                     current_node.data[n] = new_entry
             queue = [node for key, node in current_node.children.items()] + queue
 
-    def recompose_ontos(self):
-        print()
+    def recompose_ontos_from_master(self, overwrite=False):
+        ontos_path = self.onto1.ont_path.parent
+        # {<level_onto>: <LeavedOnto object>, <...>: ...}  ontos to reconstruct
+        struct = {onto.stem.split('_')[0]: LeavedOnto(OntTrie(), ont_path=onto) for onto in ontos_path.rglob('*.yaml') if onto != self.onto1.ont_path}
+        # set legends, add suffix to filename if needed
+        for onto in struct.values():
+            onto.set_legend(self.onto1.ont.legend)
+            if not overwrite:
+                onto.ont_path = onto.ont_path.parent / (onto.ont_path.stem + '_updated.yaml')
+
+        # {<base-level onto>: [<base-level onto>, <level onto>], ...}  by which ontos a given entry should be ingested
+        recompose_paths = {onto.stem.split('_')[0]: [onto.stem.split('_')[0], onto.parts[-2]] for level in ontos_path.glob('*') if level.is_dir() for onto in level.glob('*.yaml')}
+
+        # reconstruct base-level ontos
+        all_entries = self.onto1.ont.export_all_entries()
+
+        # reconstruct ontos
+        for path_, entries in all_entries:
+            for entry in entries:
+                origin = self.onto1.get_field_value(entry, 'origin')
+                for orig in origin.split(' — '):
+                    o, freq = orig.split(':')
+                    if o not in recompose_paths:
+                        continue
+
+                    freq = int(freq)
+                    for n, onto in enumerate(recompose_paths[o]):
+                        norig_entry = deepcopy(entry)
+                        self.onto1.set_field_value(norig_entry, 'freq', freq, mode='replace')
+                        if n == 0:
+                            # base-level ontos don't have origins. removing it before adding entries normally
+                            self.onto1.set_field_value(norig_entry, 'origin', '', mode='replace')
+                            struct[onto].ont.add(path_, data=norig_entry)
+                        elif n == 1:
+                            # level ontos join all base-level ontos of their level. adding origin + merging them
+                            self.onto1.set_field_value(norig_entry, 'origin', f'{o}:{freq}', mode='replace')
+                            self.__merge_origins_n_add(path_, norig_entry, onto=struct[onto])
+
+        for onto in struct.values():
+            onto.convert2yaml()
+

@@ -221,3 +221,15 @@ class OntTrie:
         # adding data
         current_node.data.append(data)
         return True
+
+    def export_all_entries(self):
+        queue = [self.head]
+
+        entries = []
+        while queue:
+            current_node = queue.pop()
+            if current_node.leaf:
+                entries.append((current_node.path, current_node.data))
+            queue = [node for key, node in current_node.children.items()] + queue
+
+        return entries
