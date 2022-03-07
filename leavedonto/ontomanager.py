@@ -239,73 +239,83 @@ class OntoManager:
 
     def __merge_origins_n_add(self, path, entry, onto=None):
         onto = self.onto1 if not onto else onto
-        found = onto.find_word(entry[0])
-        if found:
-            for f_path, f_entries in found:
-                if path == f_path:
-                    # same entry in same section -> may need to merge origins
-                    for f_e in f_entries:
-                        # prepare comparison of entry to add and found entry
-                        entry_clean = []
-                        f_e_clean = []
-                        entry_origin = ''
-                        f_e_origin = ''
-                        entry_freq = ''
-                        f_e_freq = ''
-                        for el in onto.ont.legend:
-                            if el == 'origin':
-                                entry_origin = onto.get_field_value(entry, el)
-                                f_e_origin = onto.get_field_value(f_e, el)
-                                e_el, f_el = '', ''
-                            elif el == 'freq':
-                                entry_freq = onto.get_field_value(entry, el)
-                                f_e_freq = onto.get_field_value(f_e, el)
-                                e_el, f_el = '', ''
-                            else:
-                                e_el = onto.get_field_value(entry, el)
-                                f_el = onto.get_field_value(f_e, el)
-                            entry_clean.append(e_el)
-                            f_e_clean.append(f_el)
-
-                        if entry_clean != f_e_clean:
-                            # not the same entry -> add it normally
-                            onto.ont.add(path, entry)
-                        else:
-                            # only difference is the origin -> merge origins in the trie
-                            # 1. remove old entry
-                            onto.ont.remove_entry(path, f_e)
-
-                            # 2. merge origins
-                            origs = defaultdict(int)
-                            for o in [entry_origin, f_e_origin]:
-                                for orig in o.split(' — '):
-                                    a, b = orig.split(':')
-                                    origs[a] += int(b)
-                            origs = [f'{a}:{b}' for a, b in origs.items()]
-                            merged_origs = ' — '.join(sorted(origs))
-                            onto.set_field_value(f_e_clean, 'origin', merged_origs, mode='replace')
-
-                            # 3. merge freqs
-                            merged_freq = 0
-                            for f in [entry_freq, f_e_freq]:
-                                try:
-                                    f = int(f)
-                                except ValueError:
-                                    f = 0
-                                    pass
-                                merged_freq += f
-                            onto.set_field_value(f_e_clean, 'freq', merged_freq, mode='replace')
-
-                            # add new entry
-                            onto.ont.add(path, f_e_clean)
-
-                else:
-                    # same entries in different section -> add them normally
-                    for f_e in f_entries:
-                        onto.ont.add(path, entry)
-        else:
-            # new entries - > add them normally
+        found = onto.ont.find_entries(prefix=path, lemma=entry[0])
+        if not found:
             onto.ont.add(path, entry)
+        else:
+            for f_path, f_entries in found:
+                added = False
+                for f_e in f_entries:
+                    added = self.__merge_origins(onto, entry, f_e, path)
+                    if added:
+                        break
+                if not added:
+                    onto.ont.add(path, entry)
+
+    @staticmethod
+    def __merge_origins(onto, entry, f_e, path):
+        # prepare comparison of entry to add and found entry
+        entry_clean = []
+        f_e_clean = []
+        entry_origin = ''
+        f_e_origin = ''
+        entry_freq = ''
+        f_e_freq = ''
+        entry_level = ''
+        f_e_level = ''
+        for el in onto.ont.legend:
+            if el == 'origin':
+                entry_origin = onto.get_field_value(entry, el)
+                f_e_origin = onto.get_field_value(f_e, el)
+                e_el, f_el = '', ''
+            elif el == 'freq':
+                entry_freq = onto.get_field_value(entry, el)
+                f_e_freq = onto.get_field_value(f_e, el)
+                e_el, f_el = '', ''
+            elif el == 'level':
+                entry_level = onto.get_field_value(entry, el)
+                f_e_level = onto.get_field_value(f_e, el)
+                e_el, f_el = '', ''
+            else:
+                e_el = onto.get_field_value(entry, el)
+                f_el = onto.get_field_value(f_e, el)
+            entry_clean.append(e_el)
+            f_e_clean.append(f_el)
+
+        if entry_clean == f_e_clean:
+            # only difference is the origin -> merge origins in the trie
+            # 1. remove old entry
+            onto.ont.remove_entry(path, f_e)
+
+            # 2. merge origins
+            origs = defaultdict(int)
+            for o in [entry_origin, f_e_origin]:
+                for orig in o.split(' — '):
+                    a, b = orig.split(':')
+                    origs[a] += int(b)
+            origs = [f'{a}:{b}' for a, b in origs.items()]
+            merged_origs = ' — '.join(sorted(origs))
+            onto.set_field_value(f_e_clean, 'origin', merged_origs, mode='replace')
+
+            # 3. merge freqs
+            merged_freq = 0
+            for f in [entry_freq, f_e_freq]:
+                try:
+                    f = int(f)
+                except ValueError:
+                    f = 0
+                    pass
+                merged_freq += f
+            onto.set_field_value(f_e_clean, 'freq', merged_freq, mode='replace')
+
+            # 4. merge levels: take lowest level, the first level on which the word was introduced
+            merged_level = sorted([entry_level, f_e_level])[0]
+            onto.set_field_value(f_e_clean, 'level', merged_level, mode='replace')
+
+            # add new entry
+            onto.ont.add(path, f_e_clean)
+            return True
+        return False
 
     def adjust_legends(self):
         template = "# legend list from the original onto.\n" \
