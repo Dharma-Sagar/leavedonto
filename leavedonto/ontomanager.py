@@ -139,7 +139,7 @@ class OntoManager:
             units = []
             for line in dump.split('\n'):
                 w = line.strip().split(' ')
-                units.extend(w)
+                units.append(w)
         else:
             raise SyntaxError('line_mode is either "sentence" or "chunk".')
 

@@ -131,6 +131,11 @@ def generate_to_tag(in_file, onto, pos_list, levels, l_colors, out_file=None, fi
 
 
 def generate_to_tag_chunks(chunks, config, onto, line_mode, pos_list, levels, l_colors, out_file, fields=dict):
+    # define the unit used to calculate the line number in the segmented file.
+    # if mode == 'chunk', it is assumed that the format is 1word/line
+    # else it is assumed that the format is 1sentence/line
+    unit = 12 * 4 if line_mode == 'chunk' else 4
+
     # first load all the ontos you need in OntoManager, then run
     font = "Jomolhari"
     ft_words = Font(font, size=13, color="004e4f54")
@@ -161,6 +166,7 @@ def generate_to_tag_chunks(chunks, config, onto, line_mode, pos_list, levels, l_
     # process chunks
     has_processed = False  # ensures only one chunk is processed at a time
     for c_count, chunk in chunks.items():
+        has_added_chunk_num = False
         if config[c_count] == 'todo' and not has_processed:
             has_processed = True
             config[c_count] = 'done'
@@ -168,6 +174,15 @@ def generate_to_tag_chunks(chunks, config, onto, line_mode, pos_list, levels, l_
             # read input file into rows
             rows = rows_from_lines(chunk, line_mode)
             row_start = c_count * 4 * 4
+            if not has_added_chunk_num and c_count > 0:
+                count_cell = ws.cell(row=row_start, column=1)
+                count_cell.value = f'chunk {c_count}'
+                count_cell.alignment = Alignment(vertical='top')
+                line_cell = ws.cell(row=row_start, column=2)
+                line_cell.value = f'line {(c_count * unit) + 1}'
+                line_cell.alignment = Alignment(vertical='top')
+                has_added_chunk_num = True
+
             for n, r in enumerate(rows):
                 row = row_start + n * 4 + 1
                 pos_row = row + 1
