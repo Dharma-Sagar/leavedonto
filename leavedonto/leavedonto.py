@@ -4,7 +4,7 @@ from itertools import zip_longest
 import yaml
 
 from .load_xlsx import LoadXlsx
-from .triedicts import DictsToTrie
+from .triedicts import DictsToTrie, trie_to_dicts
 from .convert2xlsx import Convert2Xlsx
 from .convert2yaml import Convert2Yaml
 from .sort_bo_lists import SortBoLists
@@ -93,3 +93,25 @@ class LeavedOnto:
                 current_node.data = sorted_
 
             queue = [node for key, node in current_node.children.items()] + queue
+
+    def export_tree_report(self):
+        def extract_level(structure, level, key, value, total):
+            if not value or isinstance(value, list):
+                key += f": {len(value)}"
+                total.append(len(value))
+            structure.append([""] * level + [key])
+
+        onto = trie_to_dicts(self.ont)
+        list_structure, level, total = [], 0, []
+        self.__recursive_extract(onto['ont'], extract_level, list_structure, level, total)
+        total_words = sum(total)
+
+        return list_structure, total_words
+
+    def __recursive_extract(self, ont, func, structure, level, total):
+        for key, value in ont.items():
+            func(structure, level, key, value, total)
+            if isinstance(value, dict):
+                self.__recursive_extract(value, func, structure, level + 1, total)
+            else:
+                continue

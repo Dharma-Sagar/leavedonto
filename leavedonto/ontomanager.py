@@ -202,7 +202,8 @@ class OntoManager:
 
     def merge_to_onto(self, onto2, in_to_organize=False):
         # add to onto1 the entries that are only in onto2
-        onto2 = LeavedOnto(onto2)
+        if not isinstance(onto2, LeavedOnto):
+            onto2 = LeavedOnto(onto2)
 
         if not self.onto1.ont.legend:
             self.onto1.ont.legend = onto2.ont.legend
