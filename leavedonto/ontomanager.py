@@ -200,7 +200,7 @@ class OntoManager:
             print(f'merging {onto}')
             self.merge_to_onto(onto, in_to_organize=in_to_organize)
 
-    def merge_to_onto(self, onto2, in_to_organize=False):
+    def merge_to_onto(self, onto2, in_to_organize=False, add_origin=True):
         # add to onto1 the entries that are only in onto2
         if not isinstance(onto2, LeavedOnto):
             onto2 = LeavedOnto(onto2)
@@ -227,7 +227,8 @@ class OntoManager:
             return entries
 
         # add origins
-        to_merge = add_origin(to_merge)
+        if add_origin:
+            to_merge = add_origin(to_merge)
 
         if in_to_organize:
             for i in range(len(to_merge)):
