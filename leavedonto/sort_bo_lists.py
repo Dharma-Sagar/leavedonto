@@ -9,7 +9,8 @@ class SortBoLists(TibetanSort):
         # extract first four elements + append position
         first_els = []
         for n, list_ in enumerate(list_of_lists):
-            els = [list_[i] if len(list_) >= i else '' for i in range(4)]
+            max = 4 if len(list_) >= 4 else len(list_)
+            els = [list_[i] if len(list_) >= i else '' for i in range(max)]
             first_els.append(f"{''.join(els)}—{n}")
         sorted_firsts = self.sort_list(first_els)
 
