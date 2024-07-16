@@ -1,7 +1,7 @@
 from pathlib import Path
 from itertools import zip_longest
 
-import yaml
+import yaml  # PyYaml package
 
 from .load_xlsx import LoadXlsx
 from .triedicts import DictsToTrie, trie_to_dicts
@@ -37,6 +37,11 @@ class LeavedOnto:
     def convert2yaml(self, out_path=None):
         cy = Convert2Yaml(self.ont_path, self.ont)
         cy.convert2yaml(out_path)
+
+    def export_yaml_str(self):
+        cy = Convert2Yaml(self.ont_path, self.ont)
+        yaml_str = cy.gen_yaml()
+        return yaml_str
 
     def find_word(self, word):
         return self.ont.find_entries(lemma=word)

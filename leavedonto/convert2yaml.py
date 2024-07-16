@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import yaml
+import yaml  # PyYaml package
 
 from .triedicts import trie_to_dicts
 
@@ -10,9 +10,13 @@ class Convert2Yaml:
         self.ont_path = ont_path
         self.ont = trie_to_dicts(ont)
 
-    def convert2yaml(self, out_path=None):
+    def gen_yaml(self):
         out = yaml.safe_dump(self.ont, allow_unicode=True)
         out = self.__group_leaf_entries(out)
+        return out
+
+    def convert2yaml(self, out_path=None):
+        out = self.gen_yaml()
 
         if not out_path:
             out_path = self.ont_path.parent
