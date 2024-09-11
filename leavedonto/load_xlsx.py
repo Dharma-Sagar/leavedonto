@@ -61,8 +61,7 @@ class LoadXlsx:
     def __load_ont_leaves(sheets):
         leaves = {}
         for sheet in sheets:
-            idx, _ = sheet.title.split(" ", 1)
-            idx = int(idx)
+            idx = int(sheet.title)
 
             leaf = []
             max_row, max_col = coordinate_to_tuple(sheet.dimensions.split(":")[1])
@@ -91,7 +90,7 @@ class LoadXlsx:
 
     @staticmethod
     def __find_legend(workbook):
-        sheet1 = [s for s in workbook.worksheets if s.title.startswith("1 ")][0]
+        sheet1 = [s for s in workbook.worksheets if s.title.startswith("1")][0]
         _, max_col = coordinate_to_tuple(sheet1.dimensions.split(":")[1])
         legend = []
         for col in range(1, max_col + 1):
